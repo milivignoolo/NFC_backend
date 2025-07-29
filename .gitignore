@@ -1,0 +1,26 @@
+# Node.js
+node_modules/
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Base de datos SQLite
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+
+# Otros
+.vscode/

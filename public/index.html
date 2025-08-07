@@ -551,6 +551,65 @@
                 padding: 20px;
             }
         }
+.nfc-reader-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.nfc-reader-title {
+  color: #5a67d8;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+.nfc-uid-display {
+  font-size: 1rem;
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  background-color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: inline-block;
+  margin-bottom: 20px;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  transition: box-shadow 0.3s ease;
+}
+
+.nfc-uid-display:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.nfc-copy-button {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  margin: 10px;
+}
+
+.nfc-copy-button:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+}
+
+.nfc-status {
+  margin-top: 15px;
+  color: #666;
+  font-style: italic;
+}
+
+
     </style>
 </head>
 <body>
@@ -613,6 +672,55 @@
 
         <!-- Tab: Usuarios -->
         <div id="students-tab" class="tab-content active">
+            <div class="nfc-reader-container">
+                <h1 class="nfc-reader-title">Lectura de Tarjeta NFC</h1>
+              
+                <button id="leerNFC" class="nfc-copy-button">Leer Tarjeta</button>
+              
+                <p id="resultado" class="nfc-uid-display">Esperando lectura...</p>
+              
+                <button id="copiar" class="nfc-copy-button" disabled>Copiar ID</button>
+              
+                <p class="nfc-status">Acercá una tarjeta al lector</p>
+              
+                <script>
+                  const btnLeer = document.getElementById('leerNFC');
+                  const resultado = document.getElementById('resultado');
+                  const btnCopiar = document.getElementById('copiar');
+                  let ultimoIdLeido = '';
+              
+                  btnLeer.addEventListener('click', async () => {
+                    if ('NDEFReader' in window) {
+                      try {
+                        const ndef = new NDEFReader();
+                        await ndef.scan();
+              
+                        resultado.textContent = "Esperando una tarjeta...";
+              
+                        ndef.onreading = event => {
+                          const id = event.serialNumber || "(ID no disponible)";
+                          ultimoIdLeido = id;
+                          resultado.textContent = `ID leído: ${id}`;
+                          btnCopiar.disabled = false;
+                        };
+                      } catch (error) {
+                        resultado.textContent = `Error al leer NFC: ${error}`;
+                      }
+                    } else {
+                      resultado.textContent = 'Tu navegador no soporta NFC.';
+                    }
+                  });
+              
+                  btnCopiar.addEventListener('click', () => {
+                    if (ultimoIdLeido) {
+                      navigator.clipboard.writeText(ultimoIdLeido)
+                        .then(() => alert('ID copiado al portapapeles'))
+                        .catch(err => alert('Error al copiar: ' + err));
+                    }
+                  });
+                </script>
+              </div>
+              
             <!-- Formulario de registro -->
             <div class="form-container">
                 <h3><i class="fas fa-user-plus"></i> Registrar Nuevo Usuario</h3>

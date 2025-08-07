@@ -24,6 +24,25 @@ class NFCDatabase {
 
     createTables() {
         return new Promise((resolve, reject) => {
+            // Tabla de estudiantes
+            const studentsSql = `
+                CREATE TABLE IF NOT EXISTS students (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uid TEXT NOT NULL UNIQUE,
+                    dni TEXT NOT NULL UNIQUE,
+                    nombre TEXT NOT NULL,
+                    apellido TEXT NOT NULL,
+                    categoria TEXT NOT NULL CHECK(categoria IN ('Aspirante', 'Cursante', 'No cursante', 'Docente', 'No docente', 'Egresado', 'Externo')),
+                    carrera TEXT,
+                    email TEXT,
+                    telefono TEXT,
+                    localidad TEXT,
+                    provincia TEXT,
+                    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    activo BOOLEAN DEFAULT 1
+                )
+            `;
+
             // Mantener la tabla original para compatibilidad
             const cardsSql = `
                 CREATE TABLE IF NOT EXISTS nfc_cards (
@@ -46,25 +65,174 @@ class NFCDatabase {
                 )
             `;
 
-            this.db.run(cardsSql, (err) => {
+            // Crear tabla de estudiantes primero
+            this.db.run(studentsSql, (err) => {
                 if (err) {
-                    console.error('Error al crear la tabla nfc_cards:', err.message);
+                    console.error('Error al crear la tabla students:', err.message);
                     reject(err);
                     return;
                 }
-                
-                this.db.run(entriesSql, (err) => {
+
+                // Crear tabla de tarjetas
+                this.db.run(cardsSql, (err) => {
                     if (err) {
-                        console.error('Error al crear la tabla nfc_entries:', err.message);
+                        console.error('Error al crear la tabla nfc_cards:', err.message);
                         reject(err);
-                    } else {
-                        console.log('Tablas creadas o ya existen');
-                        resolve();
+                        return;
                     }
+                    
+                    // Crear tabla de entradas
+                    this.db.run(entriesSql, (err) => {
+                        if (err) {
+                            console.error('Error al crear la tabla nfc_entries:', err.message);
+                            reject(err);
+                        } else {
+                            console.log('Tablas creadas o ya existen');
+                            resolve();
+                        }
+                    });
                 });
             });
         });
     }
+
+    // ===== MÉTODOS PARA ESTUDIANTES =====
+
+    // Registrar un nuevo estudiante
+    registerStudent(studentData) {
+        return new Promise((resolve, reject) => {
+            const { uid, dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia } = studentData;
+            
+            // Validar campos requeridos
+            if (!uid || !dni || !nombre || !apellido || !categoria) {
+                reject(new Error('UID, DNI, nombre, apellido y categoría son campos requeridos'));
+                return;
+            }
+
+            // Validar categoría
+            const categoriasValidas = ['Aspirante', 'Cursante', 'No cursante', 'Docente', 'No docente', 'Egresado', 'Externo'];
+            if (!categoriasValidas.includes(categoria)) {
+                reject(new Error('Categoría no válida'));
+                return;
+            }
+
+            const sql = `
+                INSERT INTO students (uid, dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(sql, [uid, dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia], function(err) {
+                if (err) {
+                    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+                        reject(new Error('Ya existe un usuario con ese UID o DNI'));
+                    } else {
+                        reject(err);
+                    }
+                } else {
+                    console.log(`Usuario registrado: ${nombre} ${apellido} - Categoría: ${categoria}`);
+                    resolve({
+                        id: this.lastID,
+                        uid,
+                        dni,
+                        nombre,
+                        apellido,
+                        categoria,
+                        carrera,
+                        email,
+                        telefono,
+                        localidad,
+                        provincia
+                    });
+                }
+            });
+        });
+    }
+
+    // Obtener todos los estudiantes
+    getAllStudents() {
+        return new Promise((resolve, reject) => {
+            const sql = 'SELECT * FROM students ORDER BY apellido, nombre';
+            
+            this.db.all(sql, [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+
+    // Obtener estudiante por UID
+    getStudentByUID(uid) {
+        return new Promise((resolve, reject) => {
+            const sql = 'SELECT * FROM students WHERE uid = ?';
+            
+            this.db.get(sql, [uid], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    // Obtener estudiante por DNI
+    getStudentByDni(dni) {
+        return new Promise((resolve, reject) => {
+            const sql = 'SELECT * FROM students WHERE dni = ?';
+            
+            this.db.get(sql, [dni], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    // Actualizar datos de estudiante
+    updateStudent(uid, studentData) {
+        return new Promise((resolve, reject) => {
+            const { dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia, activo } = studentData;
+            
+            const sql = `
+                UPDATE students 
+                SET dni = ?, nombre = ?, apellido = ?, categoria = ?, carrera = ?, 
+                    email = ?, telefono = ?, localidad = ?, provincia = ?, activo = ?
+                WHERE uid = ?
+            `;
+
+            this.db.run(sql, [dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia, activo, uid], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log(`Estudiante actualizado: ${nombre} ${apellido} - UID: ${uid}`);
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Eliminar estudiante
+    deleteStudent(uid) {
+        return new Promise((resolve, reject) => {
+            const sql = 'DELETE FROM students WHERE uid = ?';
+            
+            this.db.run(sql, [uid], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log(`Estudiante eliminado - UID: ${uid}`);
+                    resolve({ deletedRows: this.changes });
+                }
+            });
+        });
+    }
+
+    // ===== MÉTODOS PARA ENTRADAS =====
 
     // Método para insertar una nueva entrada independiente
     insertEntry(uid) {
@@ -95,7 +263,6 @@ class NFCDatabase {
                 
                 this.db.get(selectSql, [uid], (err, row) => {
                     if (err) {
-                        // No fallamos aquí, solo registramos el error
                         console.error('Error al verificar tarjeta existente:', err.message);
                     }
 
@@ -137,9 +304,30 @@ class NFCDatabase {
         });
     }
 
-    // Mantener el método original para compatibilidad
-    insertOrUpdateUID(uid) {
-        return this.insertEntry(uid); // Ahora redirige al nuevo método
+    // Obtener todas las entradas con información del estudiante
+    getAllEntriesWithStudents() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT 
+                    e.*,
+                    s.nombre,
+                    s.apellido,
+                    s.dni,
+                    s.categoria,
+                    s.carrera
+                FROM nfc_entries e
+                LEFT JOIN students s ON e.uid = s.uid
+                ORDER BY e.timestamp DESC
+            `;
+            
+            this.db.all(sql, [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
     }
 
     // Obtener todas las entradas individuales
@@ -172,7 +360,8 @@ class NFCDatabase {
         });
     }
 
-    // Mantener los métodos originales para compatibilidad
+    // ===== MÉTODOS ORIGINALES MANTENIDOS =====
+
     getAllCards() {
         return new Promise((resolve, reject) => {
             const sql = 'SELECT * FROM nfc_cards ORDER BY last_seen DESC';
@@ -203,9 +392,10 @@ class NFCDatabase {
 
     deleteCard(uid) {
         return new Promise((resolve, reject) => {
-            // Eliminar de ambas tablas
+            // Eliminar de todas las tablas
             const deleteCardSql = 'DELETE FROM nfc_cards WHERE uid = ?';
             const deleteEntriesSql = 'DELETE FROM nfc_entries WHERE uid = ?';
+            const deleteStudentSql = 'DELETE FROM students WHERE uid = ?';
             
             this.db.run(deleteCardSql, [uid], (err) => {
                 if (err) {
@@ -213,13 +403,20 @@ class NFCDatabase {
                     return;
                 }
                 
-                this.db.run(deleteEntriesSql, [uid], function(err) {
+                this.db.run(deleteEntriesSql, [uid], (err) => {
                     if (err) {
                         reject(err);
-                    } else {
-                        console.log(`UID ${uid} eliminado de la base de datos`);
-                        resolve({ deletedRows: this.changes });
+                        return;
                     }
+                    
+                    this.db.run(deleteStudentSql, [uid], function(err) {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            console.log(`UID ${uid} eliminado completamente de la base de datos`);
+                            resolve({ deletedRows: this.changes });
+                        }
+                    });
                 });
             });
         });
@@ -227,9 +424,10 @@ class NFCDatabase {
 
     clearAllCards() {
         return new Promise((resolve, reject) => {
-            // Limpiar ambas tablas
+            // Limpiar todas las tablas
             const clearCardsSql = 'DELETE FROM nfc_cards';
             const clearEntriesSql = 'DELETE FROM nfc_entries';
+            const clearStudentsSql = 'DELETE FROM students';
             
             this.db.run(clearCardsSql, [], (err) => {
                 if (err) {
@@ -237,13 +435,20 @@ class NFCDatabase {
                     return;
                 }
                 
-                this.db.run(clearEntriesSql, [], function(err) {
+                this.db.run(clearEntriesSql, [], (err) => {
                     if (err) {
                         reject(err);
-                    } else {
-                        console.log('🧹 Todas las tarjetas y entradas eliminadas de la base de datos');
-                        resolve({ deletedRows: this.changes });
+                        return;
                     }
+                    
+                    this.db.run(clearStudentsSql, [], function(err) {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            console.log('🧹 Todas las tarjetas, entradas y estudiantes eliminados de la base de datos');
+                            resolve({ deletedRows: this.changes });
+                        }
+                    });
                 });
             });
         });
@@ -255,6 +460,7 @@ class NFCDatabase {
                 SELECT 
                     (SELECT COUNT(*) FROM nfc_cards) as total_cards,
                     (SELECT COUNT(*) FROM nfc_entries) as total_entries,
+                    (SELECT COUNT(*) FROM students) as total_students,
                     (SELECT MAX(timestamp) FROM nfc_entries) as last_activity
                 FROM nfc_cards LIMIT 1
             `;
@@ -263,7 +469,7 @@ class NFCDatabase {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(row);
+                    resolve(row || { total_cards: 0, total_entries: 0, total_students: 0, last_activity: null });
                 }
             });
         });

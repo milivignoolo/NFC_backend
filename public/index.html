@@ -51,6 +51,53 @@
             font-size: 1.1rem;
         }
 
+        .tabs {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .tab-button:hover:not(.active) {
+            background: #e2e8f0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -235,6 +282,16 @@
             color: #1e293b;
         }
 
+        .student-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .student-info {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -250,6 +307,108 @@
 
         .status-offline {
             background-color: #6b7280;
+        }
+
+        /* Formularios */
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group input, .form-group select {
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .required {
+            color: #ef4444;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .modal-header h2 {
+            color: #5a67d8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close {
+            color: #9ca3af;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #ef4444;
         }
 
         @keyframes pulse {
@@ -307,6 +466,12 @@
             border-left: 4px solid #ef4444;
         }
 
+        .alert-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
@@ -351,6 +516,10 @@
                 gap: 10px;
             }
             
+            .tab-buttons {
+                flex-direction: column;
+            }
+            
             .button-group {
                 flex-direction: column;
             }
@@ -367,9 +536,19 @@
                 min-width: unset;
             }
             
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
             th, td {
                 padding: 10px 8px;
                 font-size: 0.9rem;
+            }
+            
+            .modal-content {
+                margin: 10% auto;
+                width: 95%;
+                padding: 20px;
             }
         }
     </style>
@@ -382,7 +561,7 @@
                 <i class="fas fa-wifi"></i>
                 Sistema de Control de Acceso NFC
             </h1>
-            <p>Biblioteca de la Facultad - Control de Ingresos de Estudiantes</p>
+            <p>Biblioteca de la Facultad - Control de Ingresos</p>
         </div>
 
         <!-- Alert Container -->
@@ -391,9 +570,14 @@
         <!-- Stats -->
         <div class="stats-container">
             <div class="stat-card">
+                <i class="fas fa-users"></i>
+                <div class="stat-number" id="totalStudents">-</div>
+                <div class="stat-label">Usuarios Registrados</div>
+            </div>
+            <div class="stat-card">
                 <i class="fas fa-id-card"></i>
                 <div class="stat-number" id="totalCards">-</div>
-                <div class="stat-label">Tarjetas Registradas</div>
+                <div class="stat-label">Tarjetas Activas</div>
             </div>
             <div class="stat-card">
                 <i class="fas fa-clock"></i>
@@ -412,62 +596,314 @@
             </div>
         </div>
 
-        <!-- Controls -->
-        <div class="controls">
-            <h3><i class="fas fa-cogs"></i> Panel de Control</h3>
-            <div class="button-group">
-                <button class="btn btn-primary" onclick="loadData()">
-                    <i class="fas fa-sync-alt"></i> Actualizar Datos
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab('students')">
+                    <i class="fas fa-users"></i> Usuarios
                 </button>
-                <button class="btn btn-success" onclick="exportData()">
-                    <i class="fas fa-download"></i> Exportar CSV
+                <button class="tab-button" onclick="showTab('entries')">
+                    <i class="fas fa-list"></i> Registro de Accesos
                 </button>
-                <button class="btn btn-danger" onclick="clearAllData()">
-                    <i class="fas fa-trash"></i> Limpiar Todo
-                </button>
-            </div>
-            <div class="search-container">
-                <input type="text" class="search-input" id="searchInput" placeholder="Buscar por UID...">
-                <button class="btn btn-primary" onclick="searchEntries()">
-                    <i class="fas fa-search"></i> Buscar
-                </button>
-                <button class="btn btn-primary" onclick="clearSearch()">
-                    <i class="fas fa-times"></i> Limpiar
+                <button class="tab-button" onclick="showTab('settings')">
+                    <i class="fas fa-cogs"></i> Configuración
                 </button>
             </div>
         </div>
 
-        <!-- Data Table -->
-        <div class="data-container">
-            <h3>
-                <span><i class="fas fa-list"></i> Registro de Accesos</span>
-                <small id="recordCount">0 registros</small>
-            </h3>
-            <div class="table-container">
-                <table id="dataTable">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-hashtag"></i> ID</th>
-                            <th><i class="fas fa-id-card"></i> UID</th>
-                            <th><i class="fas fa-calendar"></i> Día</th>
-                            <th><i class="fas fa-clock"></i> Hora</th>
-                            <th><i class="fas fa-timestamp"></i> Timestamp</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Data will be loaded here -->
-                    </tbody>
-                </table>
+        <!-- Tab: Usuarios -->
+        <div id="students-tab" class="tab-content active">
+            <!-- Formulario de registro -->
+            <div class="form-container">
+                <h3><i class="fas fa-user-plus"></i> Registrar Nuevo Usuario</h3>
+                <form id="studentForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label><i class="fas fa-id-card"></i> UID de Tarjeta <span class="required">*</span></label>
+                            <input type="text" id="uid" name="uid" required placeholder="Ej: A1B2C3D4">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-id-card"></i> DNI <span class="required">*</span></label>
+                            <input type="text" id="dni" name="dni" required placeholder="Número de documento">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Nombre <span class="required">*</span></label>
+                            <input type="text" id="nombre" name="nombre" required placeholder="Nombre">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Apellido <span class="required">*</span></label>
+                            <input type="text" id="apellido" name="apellido" required placeholder="Apellido">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-users"></i> Categoría <span class="required">*</span></label>
+                            <select id="categoria" name="categoria" required>
+                                <option value="">Seleccione una categoría</option>
+                                <option value="Aspirante">Aspirante</option>
+                                <option value="Cursante">Cursante</option>
+                                <option value="No cursante">No cursante</option>
+                                <option value="Docente">Docente</option>
+                                <option value="No docente">No docente</option>
+                                <option value="Egresado">Egresado</option>
+                                <option value="Externo">Externo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-graduation-cap"></i> Carrera</label>
+                            <select id="carrera" name="carrera">
+                                <option value="">No aplica</option>
+                                <optgroup label="UTN">
+                                    <option value="UTN-Ingeniería Electromecánica">Ingeniería Electromecánica</option>
+                                    <option value="UTN-Ingeniería Electrónica">Ingeniería Electrónica</option>
+                                    <option value="UTN-Ingeniería Química">Ingeniería Química</option>
+                                    <option value="UTN-Ingeniería en Sistemas de Información">Ingeniería en Sistemas de Información</option>
+                                    <option value="UTN-Ingeniería Industrial">Ingeniería Industrial</option>
+                                    <option value="UTN-Tecnicatura en Programación">Tecnicatura en Programación</option>
+                                    <option value="UTN-Licenciatura en Adm. Rural">Licenciatura en Adm. Rural</option>
+                                    <option value="UTN-Otros">Otra carrera UTN</option>
+                                </optgroup>
+                                <optgroup label="UCES">
+                                    <option value="UCES-Abogacía">Abogacía</option>
+                                    <option value="UCES-Contador Público">Contador Público</option>
+                                    <option value="UCES-Licenciatura en Psicología">Licenciatura en Psicología</option>
+                                    <option value="UCES-Licenciatura en Recursos Humanos">Licenciatura en Recursos Humanos</option>
+                                    <option value="UCES-Otros">Otra carrera UCES</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="email" name="email" placeholder="correo@ejemplo.com">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> Teléfono</label>
+                            <input type="tel" id="telefono" name="telefono" placeholder="Número de teléfono">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> Localidad</label>
+                            <input type="text" id="localidad" name="localidad" placeholder="Localidad">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-map"></i> Provincia</label>
+                            <input type="text" id="provincia" name="provincia" placeholder="Provincia">
+                        </div>
+                    </div>
+                    <div class="button-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Registrar Usuario
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="clearForm()">
+                            <i class="fas fa-times"></i> Limpiar Formulario
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div class="pagination" id="pagination"></div>
+
+            <!-- Lista de usuarios -->
+            <div class="data-container">
+                <h3>
+                    <span><i class="fas fa-users"></i> Lista de Usuarios</span>
+                    <small id="studentCount">0 usuarios</small>
+                </h3>
+                <div class="controls">
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="studentSearchInput" placeholder="Buscar por nombre, apellido, DNI...">
+                        <button class="btn btn-primary" onclick="searchStudents()">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <button class="btn btn-primary" onclick="clearStudentSearch()">
+                            <i class="fas fa-times"></i> Limpiar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="studentsTable">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-user"></i> Usuario</th>
+                                <th><i class="fas fa-users"></i> Categoría</th>
+                                <th><i class="fas fa-graduation-cap"></i> Carrera</th>
+                                <th><i class="fas fa-id-card"></i> UID</th>
+                                <th><i class="fas fa-map-marker-alt"></i> Ubicación</th>
+                                <th><i class="fas fa-calendar"></i> Registro</th>
+                                <th><i class="fas fa-cogs"></i> Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="studentsPagination"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Registro de Accesos -->
+        <div id="entries-tab" class="tab-content">
+            <div class="controls">
+                <h3><i class="fas fa-cogs"></i> Panel de Control</h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> Actualizar Datos
+                    </button>
+                    <button class="btn btn-success" onclick="exportData()">
+                        <i class="fas fa-download"></i> Exportar CSV
+                    </button>
+                </div>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, UID o fecha...">
+                    <button class="btn btn-primary" onclick="searchEntries()">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <button class="btn btn-primary" onclick="clearSearch()">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <div class="data-container">
+                <h3>
+                    <span><i class="fas fa-list"></i> Registro de Accesos</span>
+                    <small id="recordCount">0 registros</small>
+                </h3>
+                <div class="table-container">
+                    <table id="dataTable">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-hashtag"></i> ID</th>
+                                <th><i class="fas fa-user"></i> Usuario</th>
+                                <th><i class="fas fa-id-card"></i> UID</th>
+                                <th><i class="fas fa-calendar"></i> Día</th>
+                                <th><i class="fas fa-clock"></i> Hora</th>
+                                <th><i class="fas fa-timestamp"></i> Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Configuración -->
+        <div id="settings-tab" class="tab-content">
+            <div class="controls">
+                <h3><i class="fas fa-cogs"></i> Configuración del Sistema</h3>
+                <div class="button-group">
+                    <button class="btn btn-danger" onclick="clearAllData()">
+                        <i class="fas fa-trash"></i> Limpiar Todo
+                    </button>
+                    <button class="btn btn-primary" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> Actualizar Datos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar usuario -->
+    <div id="editStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Usuario</h2>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <form id="editStudentForm">
+                <input type="hidden" id="editUid">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-id-card"></i> DNI <span class="required">*</span></label>
+                        <input type="text" id="editDni" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Nombre <span class="required">*</span></label>
+                        <input type="text" id="editNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Apellido <span class="required">*</span></label>
+                        <input type="text" id="editApellido" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-users"></i> Categoría <span class="required">*</span></label>
+                        <select id="editCategoria" required>
+                            <option value="Aspirante">Aspirante</option>
+                            <option value="Cursante">Cursante</option>
+                            <option value="No cursante">No cursante</option>
+                            <option value="Docente">Docente</option>
+                            <option value="No docente">No docente</option>
+                            <option value="Egresado">Egresado</option>
+                            <option value="Externo">Externo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-graduation-cap"></i> Carrera</label>
+                        <select id="editCarrera">
+                            <option value="">No aplica</option>
+                            <optgroup label="UTN">
+                                <option value="UTN-Ingeniería Electromecánica">Ingeniería Electromecánica</option>
+                                <option value="UTN-Ingeniería Electrónica">Ingeniería Electrónica</option>
+                                <option value="UTN-Ingeniería Química">Ingeniería Química</option>
+                                <option value="UTN-Ingeniería en Sistemas de Información">Ingeniería en Sistemas de Información</option>
+                                <option value="UTN-Ingeniería Industrial">Ingeniería Industrial</option>
+                                <option value="UTN-Tecnicatura en Programación">Tecnicatura en Programación</option>
+                                <option value="UTN-Licenciatura en Adm. Rural">Licenciatura en Adm. Rural</option>
+                                <option value="UTN-Otros">Otra carrera UTN</option>
+                            </optgroup>
+                            <optgroup label="UCES">
+                                <option value="UCES-Abogacía">Abogacía</option>
+                                <option value="UCES-Contador Público">Contador Público</option>
+                                <option value="UCES-Licenciatura en Psicología">Licenciatura en Psicología</option>
+                                <option value="UCES-Licenciatura en Recursos Humanos">Licenciatura en Recursos Humanos</option>
+                                <option value="UCES-Otros">Otra carrera UCES</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email</label>
+                        <input type="email" id="editEmail">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-phone"></i> Teléfono</label>
+                        <input type="tel" id="editTelefono">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-map-marker-alt"></i> Localidad</label>
+                        <input type="text" id="editLocalidad">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-map"></i> Provincia</label>
+                        <input type="text" id="editProvincia">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-toggle-on"></i> Estado</label>
+                        <select id="editActivo">
+                            <option value="1">Activo</option>
+                            <option value="0">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="button-group" style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="closeEditModal()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script>
         let allEntries = [];
         let filteredEntries = [];
-        let currentPage = 1;
+        let allStudents = [];
+        let filteredStudents = [];
+        let currentEntriesPage = 1;
+        let currentStudentsPage = 1;
         const entriesPerPage = 20;
+        const studentsPerPage = 15;
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
@@ -476,34 +912,289 @@
             setInterval(loadData, 30000);
         });
 
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Load data for the tab
+            if (tabName === 'students') {
+                loadStudents();
+            } else if (tabName === 'entries') {
+                loadEntries();
+            }
+        }
+
         // Load all data
         async function loadData() {
             try {
                 showAlert('Actualizando datos...', 'info');
                 
-                // Load entries and stats
                 await Promise.all([
-                    loadEntries(),
-                    loadStats()
+                    loadStats(),
+                    loadStudents(),
+                    loadEntries()
                 ]);
                 
                 hideAlert();
             } catch (error) {
-                console.error('Error loading data:', error);
-                showAlert('Error al cargar los datos', 'error');
+                console.error('Error registering student:', error);
+                showAlert(error.message, 'error');
+            }
+        };
+
+        // Clear form
+        function clearForm() {
+            document.getElementById('studentForm').reset();
+        }
+
+        // Update students table
+        function updateStudentsTable() {
+            const tbody = document.getElementById('studentsTableBody');
+            const startIndex = (currentStudentsPage - 1) * studentsPerPage;
+            const endIndex = startIndex + studentsPerPage;
+            const pageStudents = filteredStudents.slice(startIndex, endIndex);
+
+            if (pageStudents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <br>No hay usuarios registrados
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = pageStudents.map(student => `
+                    <tr>
+                        <td>
+                            <div class="student-name">${student.nombre} ${student.apellido}</div>
+                            <div class="student-info">DNI: ${student.dni}</div>
+                            ${student.email ? `<div class="student-info">${student.email}</div>` : ''}
+                        </td>
+                        <td>${student.categoria}</td>
+                        <td>${student.carrera || 'N/A'}</td>
+                        <td><span class="uid-cell">${student.uid}</span></td>
+                        <td>
+                            ${student.localidad || ''}
+                            ${student.provincia ? `<div class="student-info">${student.provincia}</div>` : ''}
+                        </td>
+                        <td>${new Date(student.fecha_registro).toLocaleDateString('es-ES')}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="editStudent('${student.uid}')" style="margin-right: 5px; padding: 8px 12px;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteStudent('${student.uid}')" style="padding: 8px 12px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            updateStudentsPagination();
+        }
+
+        // Update students pagination
+        function updateStudentsPagination() {
+            const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+            const pagination = document.getElementById('studentsPagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = '';
+            
+            // Previous button
+            paginationHTML += `<button onclick="changeStudentsPage(${currentStudentsPage - 1})" ${currentStudentsPage === 1 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-left"></i>
+            </button>`;
+            
+            // Page numbers
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                const pageNum = i <= 3 ? i : totalPages - (5 - i);
+                paginationHTML += `<button onclick="changeStudentsPage(${pageNum})" ${currentStudentsPage === pageNum ? 'class="active"' : ''}>
+                    ${pageNum}
+                </button>`;
+            }
+            
+            // Next button
+            paginationHTML += `<button onclick="changeStudentsPage(${currentStudentsPage + 1})" ${currentStudentsPage === totalPages ? 'disabled' : ''}>
+                <i class="fas fa-chevron-right"></i>
+            </button>`;
+            
+            pagination.innerHTML = paginationHTML;
+        }
+
+        // Change students page
+        function changeStudentsPage(page) {
+            const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+            if (page < 1 || page > totalPages) return;
+            
+            currentStudentsPage = page;
+            updateStudentsTable();
+        }
+
+        // Update student count
+        function updateStudentCount() {
+            document.getElementById('studentCount').textContent = 
+                `${filteredStudents.length} usuario${filteredStudents.length !== 1 ? 's' : ''}`;
+        }
+
+        // Search students
+        function searchStudents() {
+            const searchTerm = document.getElementById('studentSearchInput').value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                filteredStudents = [...allStudents];
+            } else {
+                filteredStudents = allStudents.filter(student => 
+                    student.nombre.toLowerCase().includes(searchTerm) ||
+                    student.apellido.toLowerCase().includes(searchTerm) ||
+                    student.dni.toLowerCase().includes(searchTerm) ||
+                    student.uid.toLowerCase().includes(searchTerm) ||
+                    (student.carrera && student.carrera.toLowerCase().includes(searchTerm)) ||
+                    student.categoria.toLowerCase().includes(searchTerm) ||
+                    (student.localidad && student.localidad.toLowerCase().includes(searchTerm)) ||
+                    (student.provincia && student.provincia.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            currentStudentsPage = 1;
+            updateStudentsTable();
+            updateStudentCount();
+        }
+
+        // Clear student search
+        function clearStudentSearch() {
+            document.getElementById('studentSearchInput').value = '';
+            filteredStudents = [...allStudents];
+            currentStudentsPage = 1;
+            updateStudentsTable();
+            updateStudentCount();
+        }
+
+        // Edit student
+        async function editStudent(uid) {
+            try {
+                const response = await fetch(`/api/students/uid/${uid}`);
+                if (!response.ok) throw new Error('Student not found');
+                
+                const student = await response.json();
+                
+                // Fill the modal form
+                document.getElementById('editUid').value = student.uid;
+                document.getElementById('editDni').value = student.dni;
+                document.getElementById('editNombre').value = student.nombre;
+                document.getElementById('editApellido').value = student.apellido;
+                document.getElementById('editCategoria').value = student.categoria;
+                document.getElementById('editCarrera').value = student.carrera || '';
+                document.getElementById('editEmail').value = student.email || '';
+                document.getElementById('editTelefono').value = student.telefono || '';
+                document.getElementById('editLocalidad').value = student.localidad || '';
+                document.getElementById('editProvincia').value = student.provincia || '';
+                document.getElementById('editActivo').value = student.activo ? '1' : '0';
+                
+                // Show modal
+                document.getElementById('editStudentModal').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading student:', error);
+                showAlert('Error al cargar los datos del usuario', 'error');
             }
         }
+
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('editStudentModal').style.display = 'none';
+        }
+
+        // Handle edit form submission
+        document.getElementById('editStudentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const uid = document.getElementById('editUid').value;
+            const studentData = {
+                dni: document.getElementById('editDni').value,
+                nombre: document.getElementById('editNombre').value,
+                apellido: document.getElementById('editApellido').value,
+                categoria: document.getElementById('editCategoria').value,
+                carrera: document.getElementById('editCarrera').value,
+                email: document.getElementById('editEmail').value,
+                telefono: document.getElementById('editTelefono').value,
+                localidad: document.getElementById('editLocalidad').value,
+                provincia: document.getElementById('editProvincia').value,
+                activo: document.getElementById('editActivo').value === '1'
+            };
+            
+            try {
+                const response = await fetch(`/api/students/${uid}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(studentData)
+                });
+                
+                if (!response.ok) throw new Error('Error updating student');
+                
+                showAlert('Usuario actualizado exitosamente', 'success');
+                closeEditModal();
+                await loadStudents();
+            } catch (error) {
+                console.error('Error updating student:', error);
+                showAlert('Error al actualizar el usuario', 'error');
+            }
+        });
+
+        // Delete student
+        async function deleteStudent(uid) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción también eliminará todos sus registros de acceso.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/students/${uid}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Error deleting student');
+
+                showAlert('Usuario eliminado exitosamente', 'success');
+                await loadStudents();
+                await loadStats();
+            } catch (error) {
+                console.error('Error deleting student:', error);
+                showAlert('Error al eliminar el usuario', 'error');
+            }
+        }
+
+        // ===== ENTRIES MANAGEMENT =====
 
         // Load entries from API
         async function loadEntries() {
             try {
-                const response = await fetch('/api/entries');
+                const response = await fetch('/api/entries/with-students');
                 if (!response.ok) throw new Error('Error fetching entries');
                 
                 allEntries = await response.json();
                 filteredEntries = [...allEntries];
                 
-                updateTable();
+                updateEntriesTable();
                 updateRecordCount();
             } catch (error) {
                 console.error('Error loading entries:', error);
@@ -511,90 +1202,50 @@
             }
         }
 
-        // Load statistics
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/stats');
-                if (!response.ok) throw new Error('Error fetching stats');
-                
-                const stats = await response.json();
-                
-                document.getElementById('totalCards').textContent = stats.total_cards || 0;
-                document.getElementById('totalEntries').textContent = stats.total_entries || 0;
-                
-                // Calculate today's entries
-                const today = new Date().toLocaleDateString('es-ES');
-                const todayEntries = allEntries.filter(entry => entry.dia === today).length;
-                document.getElementById('todayEntries').textContent = todayEntries;
-                
-                // Update last activity
-                if (stats.last_activity) {
-                    const lastActivity = new Date(stats.last_activity);
-                    const now = new Date();
-                    const diffMinutes = Math.floor((now - lastActivity) / (1000 * 60));
-                    
-                    let lastActivityText;
-                    if (diffMinutes < 1) {
-                        lastActivityText = 'Ahora';
-                    } else if (diffMinutes < 60) {
-                        lastActivityText = `${diffMinutes}m`;
-                    } else if (diffMinutes < 1440) {
-                        lastActivityText = `${Math.floor(diffMinutes / 60)}h`;
-                    } else {
-                        lastActivityText = `${Math.floor(diffMinutes / 1440)}d`;
-                    }
-                    
-                    document.getElementById('lastActivity').textContent = lastActivityText;
-                    
-                    // Update system status
-                    const statusIndicator = document.getElementById('systemStatus');
-                    if (diffMinutes < 5) {
-                        statusIndicator.className = 'status-indicator status-online';
-                    } else {
-                        statusIndicator.className = 'status-indicator status-offline';
-                    }
-                } else {
-                    document.getElementById('lastActivity').textContent = 'Sin datos';
-                    document.getElementById('systemStatus').className = 'status-indicator status-offline';
-                }
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-
-        // Update table with current page data
-        function updateTable() {
+        // Update entries table with current page data
+        function updateEntriesTable() {
             const tbody = document.getElementById('tableBody');
-            const startIndex = (currentPage - 1) * entriesPerPage;
+            const startIndex = (currentEntriesPage - 1) * entriesPerPage;
             const endIndex = startIndex + entriesPerPage;
             const pageEntries = filteredEntries.slice(startIndex, endIndex);
 
             if (pageEntries.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="empty-state">
+                        <td colspan="6" class="empty-state">
                             <i class="fas fa-inbox"></i>
                             <br>No hay registros para mostrar
                         </td>
                     </tr>
                 `;
             } else {
-                tbody.innerHTML = pageEntries.map(entry => `
-                    <tr>
-                        <td>${entry.id}</td>
-                        <td><span class="uid-cell">${entry.uid}</span></td>
-                        <td>${entry.dia}</td>
-                        <td>${entry.hora}</td>
-                        <td>${new Date(entry.timestamp).toLocaleString('es-ES')}</td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = pageEntries.map(entry => {
+                    let studentInfo = 'UID no registrado';
+                    if (entry.nombre && entry.apellido) {
+                        studentInfo = `
+                            <div class="student-name">${entry.nombre} ${entry.apellido}</div>
+                            <div class="student-info">${entry.categoria} - ${entry.carrera || 'Sin carrera'}</div>
+                        `;
+                    }
+                    
+                    return `
+                        <tr>
+                            <td>${entry.id}</td>
+                            <td>${studentInfo}</td>
+                            <td><span class="uid-cell">${entry.uid}</span></td>
+                            <td>${entry.dia}</td>
+                            <td>${entry.hora}</td>
+                            <td>${new Date(entry.timestamp).toLocaleString('es-ES')}</td>
+                        </tr>
+                    `;
+                }).join('');
             }
 
-            updatePagination();
+            updateEntriesPagination();
         }
 
-        // Update pagination
-        function updatePagination() {
+        // Update entries pagination
+        function updateEntriesPagination() {
             const totalPages = Math.ceil(filteredEntries.length / entriesPerPage);
             const pagination = document.getElementById('pagination');
             
@@ -606,33 +1257,33 @@
             let paginationHTML = '';
             
             // Previous button
-            paginationHTML += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+            paginationHTML += `<button onclick="changeEntriesPage(${currentEntriesPage - 1})" ${currentEntriesPage === 1 ? 'disabled' : ''}>
                 <i class="fas fa-chevron-left"></i>
             </button>`;
             
             // Page numbers
             for (let i = 1; i <= Math.min(totalPages, 5); i++) {
                 const pageNum = i <= 3 ? i : totalPages - (5 - i);
-                paginationHTML += `<button onclick="changePage(${pageNum})" ${currentPage === pageNum ? 'class="active"' : ''}>
+                paginationHTML += `<button onclick="changeEntriesPage(${pageNum})" ${currentEntriesPage === pageNum ? 'class="active"' : ''}>
                     ${pageNum}
                 </button>`;
             }
             
             // Next button
-            paginationHTML += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+            paginationHTML += `<button onclick="changeEntriesPage(${currentEntriesPage + 1})" ${currentEntriesPage === totalPages ? 'disabled' : ''}>
                 <i class="fas fa-chevron-right"></i>
             </button>`;
             
             pagination.innerHTML = paginationHTML;
         }
 
-        // Change page
-        function changePage(page) {
+        // Change entries page
+        function changeEntriesPage(page) {
             const totalPages = Math.ceil(filteredEntries.length / entriesPerPage);
             if (page < 1 || page > totalPages) return;
             
-            currentPage = page;
-            updateTable();
+            currentEntriesPage = page;
+            updateEntriesTable();
         }
 
         // Update record count
@@ -651,12 +1302,15 @@
                 filteredEntries = allEntries.filter(entry => 
                     entry.uid.toLowerCase().includes(searchTerm) ||
                     entry.dia.includes(searchTerm) ||
-                    entry.hora.includes(searchTerm)
+                    entry.hora.includes(searchTerm) ||
+                    (entry.nombre && entry.nombre.toLowerCase().includes(searchTerm)) ||
+                    (entry.apellido && entry.apellido.toLowerCase().includes(searchTerm)) ||
+                    (entry.dni && entry.dni.toLowerCase().includes(searchTerm))
                 );
             }
             
-            currentPage = 1;
-            updateTable();
+            currentEntriesPage = 1;
+            updateEntriesTable();
             updateRecordCount();
         }
 
@@ -664,8 +1318,8 @@
         function clearSearch() {
             document.getElementById('searchInput').value = '';
             filteredEntries = [...allEntries];
-            currentPage = 1;
-            updateTable();
+            currentEntriesPage = 1;
+            updateEntriesTable();
             updateRecordCount();
         }
 
@@ -677,9 +1331,13 @@
             }
 
             const csvContent = [
-                ['ID', 'UID', 'Día', 'Hora', 'Timestamp'],
+                ['ID', 'Usuario', 'DNI', 'Categoría', 'Carrera', 'UID', 'Día', 'Hora', 'Timestamp'],
                 ...filteredEntries.map(entry => [
                     entry.id,
+                    entry.nombre && entry.apellido ? `${entry.nombre} ${entry.apellido}` : 'No registrado',
+                    entry.dni || '',
+                    entry.categoria || '',
+                    entry.carrera || '',
                     entry.uid,
                     entry.dia,
                     entry.hora,
@@ -702,7 +1360,7 @@
 
         // Clear all data
         async function clearAllData() {
-            if (!confirm('¿Estás seguro de que quieres eliminar todos los registros? Esta acción no se puede deshacer.')) {
+            if (!confirm('¿Estás seguro de que quieres eliminar todos los registros y usuarios? Esta acción no se puede deshacer.')) {
                 return;
             }
 
@@ -721,11 +1379,76 @@
             }
         }
 
+        // Load stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                if (!response.ok) throw new Error('Error fetching stats');
+                
+                const stats = await response.json();
+                
+                document.getElementById('totalStudents').textContent = stats.total_students;
+                document.getElementById('totalCards').textContent = stats.total_cards;
+                document.getElementById('totalEntries').textContent = stats.total_entries;
+                
+                // Calculate today's entries
+                const today = new Date().toISOString().split('T')[0];
+                const todayEntries = allEntries.filter(entry => entry.timestamp.includes(today)).length;
+                document.getElementById('todayEntries').textContent = todayEntries;
+                
+                // Update last activity
+                if (stats.last_activity) {
+                    const lastActivity = new Date(stats.last_activity);
+                    document.getElementById('lastActivity').textContent = lastActivity.toLocaleString('es-ES');
+                    document.getElementById('systemStatus').className = 'status-indicator status-online';
+                } else {
+                    document.getElementById('lastActivity').textContent = 'Nunca';
+                    document.getElementById('systemStatus').className = 'status-indicator status-offline';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load students
+        async function loadStudents() {
+            try {
+                const response = await fetch('/api/students');
+                if (!response.ok) throw new Error('Error fetching students');
+                
+                allStudents = await response.json();
+                filteredStudents = [...allStudents];
+                
+                updateStudentsTable();
+                updateStudentCount();
+            } catch (error) {
+                console.error('Error loading students:', error);
+                showAlert('Error al cargar los usuarios', 'error');
+            }
+        }
+
         // Show alert
         function showAlert(message, type = 'info') {
             const alertContainer = document.getElementById('alertContainer');
-            const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
-            const icon = type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+            let alertClass, icon;
+            
+            switch(type) {
+                case 'error':
+                    alertClass = 'alert-error';
+                    icon = 'fas fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    alertClass = 'alert-warning';
+                    icon = 'fas fa-exclamation-triangle';
+                    break;
+                case 'success':
+                    alertClass = 'alert-success';
+                    icon = 'fas fa-check-circle';
+                    break;
+                default:
+                    alertClass = 'alert-success';
+                    icon = 'fas fa-info-circle';
+            }
             
             alertContainer.innerHTML = `
                 <div class="alert ${alertClass}">
@@ -742,10 +1465,63 @@
             }, 3000);
         }
 
-        // Add event listener for Enter key in search
+        // Add event listeners for Enter key in search inputs
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 searchEntries();
+            }
+        });
+
+        document.getElementById('studentSearchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchStudents();
+            }
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('editStudentModal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
+        }
+
+        // Handle student form submission
+        document.getElementById('studentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const studentData = {
+                uid: document.getElementById('uid').value,
+                dni: document.getElementById('dni').value,
+                nombre: document.getElementById('nombre').value,
+                apellido: document.getElementById('apellido').value,
+                categoria: document.getElementById('categoria').value,
+                carrera: document.getElementById('carrera').value,
+                email: document.getElementById('email').value,
+                telefono: document.getElementById('telefono').value,
+                localidad: document.getElementById('localidad').value,
+                provincia: document.getElementById('provincia').value
+            };
+            
+            try {
+                const response = await fetch('/api/students', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(studentData)
+                });
+                
+                if (!response.ok) throw new Error('Error registering student');
+                
+                const data = await response.json();
+                showAlert('Usuario registrado exitosamente', 'success');
+                clearForm();
+                await loadStudents();
+                await loadStats();
+            } catch (error) {
+                console.error('Error registering student:', error);
+                showAlert(error.message, 'error');
             }
         });
     </script>

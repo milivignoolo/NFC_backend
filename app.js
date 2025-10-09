@@ -10,254 +10,178 @@ const db = new NFCDatabase();
 app.use(cors());
 app.use(express.json());
 
-// Servir archivos estáticos (HTML, CSS, JS)
+// ==========================
+// === ARCHIVOS ESTÁTICOS ===
+// ==========================
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Ruta principal para servir la interfaz web
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ===== RUTAS PARA NFC/ARDUINO =====
-
-// Endpoint específico para Arduino
-app.post('/api/nfc', async (req, res) => {
-  const { uid } = req.body;
-  if (!uid) {
-    return res.status(400).json({ error: 'UID es requerido' });
-  }
-
+// ==========================
+// ==== RUTAS DE USUARIO ====
+// ==========================
+app.get('/api/usuarios', async (req, res) => {
   try {
-    // Verificar si el estudiante existe
-    const student = await db.getStudentByUID(uid);
-    
-    // Registrar la entrada
-    const result = await db.insertEntry(uid);
-    
-    // Agregar información del estudiante si existe
-    if (student) {
-      result.student = {
-        nombre: student.nombre,
-        apellido: student.apellido,
-        dni: student.dni,
-        categoria: student.categoria,
-        carrera: student.carrera
-      };
-      result.message = `Acceso registrado para ${student.nombre} ${student.apellido}`;
-    } else {
-      result.message = `Acceso registrado para UID no registrado: ${uid}`;
+    const usuarios = await db.obtenerUsuarios();
+    res.json(usuarios);
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
+app.post('/api/usuarios', async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data.id_usuario || !data.tipo_usuario || !data.nombre_completo) {
+      return res.status(400).json({ error: 'Campos obligatorios faltantes' });
     }
-    
+
+    const usuario = await db.registrarUsuario(data);
+    res.status(201).json(usuario);
+  } catch (error) {
+    console.error('Error al registrar usuario:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/usuarios/uid/:uid', async (req, res) => {
+  try {
+    const usuario = await db.obtenerUsuarioPorUID(req.params.uid);
+    if (usuario) res.json(usuario);
+    else res.status(404).json({ error: 'Usuario no encontrado' });
+  } catch (error) {
+    console.error('Error al obtener usuario por UID:', error);
+    res.status(500).json({ error: 'Error al obtener usuario' });
+  }
+});
+
+app.delete('/api/usuarios/:id', async (req, res) => {
+  try {
+    const result = await db.eliminarUsuario(req.params.id);
+    if (result.deletedRows > 0) res.json({ message: 'Usuario eliminado correctamente' });
+    else res.status(404).json({ error: 'Usuario no encontrado' });
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({ error: 'Error al eliminar usuario' });
+  }
+});
+
+// ==========================
+// ==== RUTAS DE TURNOS =====
+// ==========================
+app.post('/api/turnos', async (req, res) => {
+  try {
+    const result = await db.registrarTurno(req.body);
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error al registrar turno:', error);
+    res.status(500).json({ error: 'Error al registrar turno' });
+  }
+});
+
+app.get('/api/turnos', async (req, res) => {
+  try {
+    const turnos = await db.obtenerTurnos();
+    res.json(turnos);
+  } catch (error) {
+    console.error('Error al obtener turnos:', error);
+    res.status(500).json({ error: 'Error al obtener turnos' });
+  }
+});
+
+// ==========================
+// === RUTAS COMPUTADORAS ===
+// ==========================
+app.get('/api/computadoras', async (req, res) => {
+  try {
+    const computadoras = await db.obtenerComputadoras();
+    res.json(computadoras);
+  } catch (error) {
+    console.error('Error al obtener computadoras:', error);
+    res.status(500).json({ error: 'Error al obtener computadoras' });
+  }
+});
+
+app.post('/api/computadoras', async (req, res) => {
+  try {
+    const compu = await db.registrarComputadora(req.body);
+    res.status(201).json(compu);
+  } catch (error) {
+    console.error('Error al registrar computadora:', error);
+    res.status(500).json({ error: 'Error al registrar computadora' });
+  }
+});
+
+app.put('/api/computadoras/:id/estado', async (req, res) => {
+  try {
+    const result = await db.actualizarEstadoComputadora(req.params.id, req.body.estado);
     res.json(result);
   } catch (error) {
-    console.error('Error al procesar tarjeta NFC:', error);
-    res.status(500).json({ error: 'Error al procesar tarjeta NFC' });
+    console.error('Error al actualizar estado de computadora:', error);
+    res.status(500).json({ error: 'Error al actualizar estado' });
   }
 });
 
-// ===== RUTAS PARA ESTUDIANTES =====
-
-// Obtener todos los estudiantes
-app.get('/api/students', async (req, res) => {
+// =====================================
+// === RUTAS PRÉSTAMOS DE COMPUTADORAS =
+// =====================================
+app.get('/api/prestamos-computadora', async (req, res) => {
   try {
-    const students = await db.getAllStudents();
-    res.json(students);
+    const prestamos = await db.obtenerPrestamosComputadora();
+    res.json(prestamos);
   } catch (error) {
-    console.error('Error al obtener estudiantes:', error);
-    res.status(500).json({ error: 'Error al obtener estudiantes' });
+    console.error('Error al obtener préstamos de computadora:', error);
+    res.status(500).json({ error: 'Error al obtener préstamos' });
   }
 });
 
-// Registrar un nuevo estudiante
-app.post('/api/students', async (req, res) => {
+app.post('/api/prestamos-computadora', async (req, res) => {
   try {
-    // Validar campos requeridos
-    const { uid, dni, nombre, apellido, categoria } = req.body;
-    if (!uid || !dni || !nombre || !apellido || !categoria) {
-      return res.status(400).json({ error: 'UID, DNI, nombre, apellido y categoría son campos requeridos' });
-    }
-
-    const student = await db.registerStudent(req.body);
-    res.status(201).json(student);
+    const result = await db.registrarPrestamoComputadora(req.body);
+    res.status(201).json(result);
   } catch (error) {
-    console.error('Error al registrar estudiante:', error);
-    if (error.message.includes('Ya existe')) {
-      res.status(409).json({ error: error.message });
-    } else if (error.message.includes('requeridos') || error.message.includes('Categoría no válida')) {
-      res.status(400).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Error al registrar estudiante' });
-    }
+    console.error('Error al registrar préstamo de computadora:', error);
+    res.status(500).json({ error: 'Error al registrar préstamo' });
   }
 });
 
-// Obtener estudiante por UID
-app.get('/api/students/uid/:uid', async (req, res) => {
-  const { uid } = req.params;
+app.put('/api/prestamos-computadora/:id/finalizar', async (req, res) => {
   try {
-    const student = await db.getStudentByUID(uid);
-    if (student) {
-      res.json(student);
-    } else {
-      res.status(404).json({ error: 'Estudiante no encontrado' });
-    }
-  } catch (error) {
-    console.error('Error al obtener estudiante:', error);
-    res.status(500).json({ error: 'Error al obtener estudiante' });
-  }
-});
-
-// Obtener estudiante por DNI
-app.get('/api/students/dni/:dni', async (req, res) => {
-  const { dni } = req.params;
-  try {
-    const student = await db.getStudentByDni(dni);
-    if (student) {
-      res.json(student);
-    } else {
-      res.status(404).json({ error: 'Estudiante no encontrado' });
-    }
-  } catch (error) {
-    console.error('Error al obtener estudiante:', error);
-    res.status(500).json({ error: 'Error al obtener estudiante' });
-  }
-});
-
-// Actualizar estudiante
-app.put('/api/students/:uid', async (req, res) => {
-  const { uid } = req.params;
-  try {
-    const result = await db.updateStudent(uid, req.body);
-    if (result.changes > 0) {
-      res.json({ message: 'Estudiante actualizado correctamente' });
-    } else {
-      res.status(404).json({ error: 'Estudiante no encontrado' });
-    }
-  } catch (error) {
-    console.error('Error al actualizar estudiante:', error);
-    res.status(500).json({ error: 'Error al actualizar estudiante' });
-  }
-});
-
-// Eliminar estudiante
-app.delete('/api/students/:uid', async (req, res) => {
-  const { uid } = req.params;
-  try {
-    const result = await db.deleteStudent(uid);
-    if (result.deletedRows > 0) {
-      res.json({ message: 'Estudiante eliminado correctamente' });
-    } else {
-      res.status(404).json({ error: 'Estudiante no encontrado' });
-    }
-  } catch (error) {
-    console.error('Error al eliminar estudiante:', error);
-    res.status(500).json({ error: 'Error al eliminar estudiante' });
-  }
-});
-
-// ===== RUTAS PARA ENTRADAS =====
-
-// Obtener todas las entradas individuales
-app.get('/api/entries', async (req, res) => {
-  try {
-    const entries = await db.getAllEntries();
-    res.json(entries);
-  } catch (error) {
-    console.error('Error al obtener entradas:', error);
-    res.status(500).json({ error: 'Error al obtener entradas' });
-  }
-});
-
-// Obtener todas las entradas con información de estudiantes
-app.get('/api/entries/with-students', async (req, res) => {
-  try {
-    const entries = await db.getAllEntriesWithStudents();
-    res.json(entries);
-  } catch (error) {
-    console.error('Error al obtener entradas con estudiantes:', error);
-    res.status(500).json({ error: 'Error al obtener entradas con estudiantes' });
-  }
-});
-
-// Obtener entradas por UID
-app.get('/api/entries/:uid', async (req, res) => {
-  const { uid } = req.params;
-  try {
-    const entries = await db.getEntriesByUID(uid);
-    res.json(entries);
-  } catch (error) {
-    console.error('Error al obtener entradas para el UID:', error);
-    res.status(500).json({ error: 'Error al obtener entradas para el UID' });
-  }
-});
-
-// ===== RUTAS PARA TARJETAS (MANTENIDAS PARA COMPATIBILIDAD) =====
-
-// Obtener todas las tarjetas
-app.get('/api/cards', async (req, res) => {
-  try {
-    const cards = await db.getAllCards();
-    res.json(cards);
-  } catch (error) {
-    console.error('Error al obtener tarjetas:', error);
-    res.status(500).json({ error: 'Error al obtener tarjetas' });
-  }
-});
-
-// Agregar o actualizar una tarjeta
-app.post('/api/cards', async (req, res) => {
-  const { uid } = req.body;
-  if (!uid) {
-    return res.status(400).json({ error: 'UID es requerido' });
-  }
-
-  try {
-    const result = await db.insertEntry(uid);
+    const result = await db.finalizarPrestamoComputadora(req.params.id, req.body.hora_fin);
     res.json(result);
   } catch (error) {
-    console.error('Error al insertar o actualizar tarjeta:', error);
-    res.status(500).json({ error: 'Error al insertar o actualizar tarjeta' });
+    console.error('Error al finalizar préstamo de computadora:', error);
+    res.status(500).json({ error: 'Error al finalizar préstamo' });
   }
 });
 
-// Obtener estadísticas
-app.get('/api/stats', async (req, res) => {
-  try {
-    const stats = await db.getStats();
-    res.json(stats);
-  } catch (error) {
-    console.error('Error al obtener estadísticas:', error);
-    res.status(500).json({ error: 'Error al obtener estadísticas' });
-  }
+// ==========================
+// ==== SSE EVENTOS EN VIVO ==
+// ==========================
+let sseClients = [];
+
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const clientId = Date.now();
+  sseClients.push({ id: clientId, res });
+  console.log(`👥 Cliente SSE conectado (${clientId})`);
+
+  req.on('close', () => {
+    sseClients = sseClients.filter(c => c.id !== clientId);
+    console.log(`❌ Cliente SSE desconectado (${clientId})`);
+  });
 });
 
-// Borrar una tarjeta
-app.delete('/api/cards/:uid', async (req, res) => {
-  const { uid } = req.params;
-
-  try {
-    const result = await db.deleteCard(uid);
-    res.json(result);
-  } catch (error) {
-    console.error('Error al eliminar tarjeta:', error);
-    res.status(500).json({ error: 'Error al eliminar tarjeta' });
-  }
-});
-
-// Limpiar todas las tarjetas
-app.delete('/api/cards', async (req, res) => {
-  try {
-    const result = await db.clearAllCards();
-    res.json(result);
-  } catch (error) {
-    console.error('Error al limpiar tarjetas:', error);
-    res.status(500).json({ error: 'Error al limpiar tarjetas' });
-  }
-});
-
+// ==========================
+// ==== INICIO DEL SERVIDOR ==
+// ==========================
 app.listen(port, () => {
   console.log(`🚀 Servidor escuchando en http://localhost:${port}`);
-  console.log(`📱 Interfaz web disponible en http://localhost:${port}`);
 });
 
 process.on('SIGINT', async () => {

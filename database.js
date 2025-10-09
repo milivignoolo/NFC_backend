@@ -1,494 +1,391 @@
+// database.js
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 class NFCDatabase {
-    constructor(dbPath = 'nfc_data.db') {
+    constructor(dbPath = path.join(__dirname, 'biblioteca_nfc.db')) {
         this.dbPath = dbPath;
         this.db = null;
         this.init();
     }
 
-    init() {
-        return new Promise((resolve, reject) => {
+    // ================================
+    // 📦 Inicialización
+    // ================================
+    async init() {
+        try {
             this.db = new sqlite3.Database(this.dbPath, (err) => {
                 if (err) {
-                    console.error('Error al conectar con la base de datos:', err.message);
-                    reject(err);
+                    console.error('❌ Error al conectar con la base de datos:', err.message);
                 } else {
-                    console.log('Conectado a la base de datos SQLite');
-                    this.createTables().then(resolve).catch(reject);
+                    console.log('✅ Conectado a la base de datos SQLite');
+                    this.createTables();
                 }
             });
-        });
+        } catch (error) {
+            console.error('⚠️ Error en init():', error);
+        }
     }
 
+    // ================================
+    // 🧱 Creación de tablas
+    // ================================
     createTables() {
         return new Promise((resolve, reject) => {
-            // Tabla de estudiantes
-            const studentsSql = `
-                CREATE TABLE IF NOT EXISTS students (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    uid TEXT NOT NULL UNIQUE,
-                    dni TEXT NOT NULL UNIQUE,
-                    nombre TEXT NOT NULL,
-                    apellido TEXT NOT NULL,
-                    categoria TEXT NOT NULL CHECK(categoria IN ('Aspirante', 'Cursante', 'No cursante', 'Docente', 'No docente', 'Egresado', 'Externo')),
-                    carrera TEXT,
+            const usuarioSql = `
+                CREATE TABLE IF NOT EXISTS usuario (
+                    id_usuario TEXT PRIMARY KEY,
+                    tipo_usuario TEXT NOT NULL CHECK(tipo_usuario IN (
+                        'Aspirante', 'Cursante', 'No cursante', 
+                        'Docente', 'No docente', 'Egresado', 'Externo'
+                    )),
+                    nombre_completo TEXT NOT NULL,
                     email TEXT,
                     telefono TEXT,
-                    localidad TEXT,
+                    domicilio TEXT,
+                    codigo_postal TEXT,
+                    ciudad TEXT,
                     provincia TEXT,
-                    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    activo BOOLEAN DEFAULT 1
+                    sexo TEXT,
+                    fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    operador TEXT,
+                    uid_tarjeta TEXT UNIQUE, -- Puede ser NULL
+                    contrasena TEXT,          -- Nuevo campo
+                    legajo TEXT,
+                    carreras TEXT,
+                    materias TEXT
                 )
             `;
 
-            // Mantener la tabla original para compatibilidad
-            const cardsSql = `
-                CREATE TABLE IF NOT EXISTS nfc_cards (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    uid TEXT NOT NULL UNIQUE,
-                    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    read_count INTEGER DEFAULT 1
+            const libroSql = `
+                CREATE TABLE IF NOT EXISTS libro (
+                    id_libro TEXT PRIMARY KEY,
+                    titulo TEXT NOT NULL,
+                    sub_titulo TEXT,
+                    signatura TEXT,
+                    autor TEXT,
+                    segundo_autor TEXT,
+                    tercer_autor TEXT,
+                    isbn TEXT,
+                    serie TEXT,
+                    editorial TEXT,
+                    edicion TEXT,
+                    lugar TEXT,
+                    anio INTEGER,
+                    cant_paginas INTEGER,
+                    tamano TEXT,
+                    idioma TEXT,
+                    origen TEXT,
+                    fecha_de_ingreso DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    ubicacion TEXT,
+                    nivel TEXT,
+                    dias_de_prestamo INTEGER DEFAULT 7,
+                    palabra_clave TEXT,
+                    observaciones TEXT
                 )
             `;
 
-            // Nueva tabla para registros individuales con columnas específicas para día y hora
-            const entriesSql = `
-                CREATE TABLE IF NOT EXISTS nfc_entries (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    uid TEXT NOT NULL,
-                    dia TEXT NOT NULL,
+            const prestamoLibroSql = `
+                CREATE TABLE IF NOT EXISTS prestamo_libro (
+                    id_prestamo INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fecha_inicial DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    fecha_final DATETIME,
+                    operador TEXT,
+                    estado TEXT NOT NULL CHECK(estado IN ('en_prestamo', 'reservado', 'libre')),
+                    id_usuario TEXT NOT NULL,
+                    id_libro TEXT NOT NULL,
+                    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
+                    FOREIGN KEY (id_libro) REFERENCES libro(id_libro)
+                )
+            `;
+
+            const entradaSql = `
+                CREATE TABLE IF NOT EXISTS entrada (
+                    id_entrada INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fecha TEXT NOT NULL,
                     hora TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                    tipo_uso TEXT,
+                    observacion TEXT,
+                    id_usuario TEXT NOT NULL,
+                    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
                 )
             `;
 
-            // Crear tabla de estudiantes primero
-            this.db.run(studentsSql, (err) => {
-                if (err) {
-                    console.error('Error al crear la tabla students:', err.message);
-                    reject(err);
-                    return;
-                }
+            const turnoSql = `
+                CREATE TABLE IF NOT EXISTS turno (
+                    id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fecha TEXT NOT NULL,
+                    hora TEXT NOT NULL,
+                    tipo_uso TEXT,
+                    id_usuario TEXT NOT NULL,
+                    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
+                )
+            `;
 
-                // Crear tabla de tarjetas
-                this.db.run(cardsSql, (err) => {
-                    if (err) {
-                        console.error('Error al crear la tabla nfc_cards:', err.message);
-                        reject(err);
-                        return;
+            const computadoraSql = `
+                CREATE TABLE IF NOT EXISTS computadora (
+                    id_computadora TEXT PRIMARY KEY,
+                    marca TEXT,
+                    modelo TEXT,
+                    estado TEXT CHECK(estado IN ('disponible', 'en_uso', 'mantenimiento')) DEFAULT 'disponible',
+                    sistema_operativo TEXT,
+                    observacion TEXT
+                )
+            `;
+
+            const prestamoComputadoraSql = `
+                CREATE TABLE IF NOT EXISTS prestamo_computadora (
+                    id_prestamo_compu INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id_usuario TEXT NOT NULL,
+                    fecha TEXT NOT NULL,
+                    hora_inicio TEXT NOT NULL,
+                    hora_fin TEXT,
+                    operador TEXT,
+                    id_computadora TEXT NOT NULL,
+                    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
+                    FOREIGN KEY (id_computadora) REFERENCES computadora(id_computadora)
+                )
+            `;
+
+            this.db.serialize(() => {
+                this.db.run(usuarioSql);
+                this.db.run(libroSql);
+                this.db.run(prestamoLibroSql);
+                this.db.run(entradaSql);
+                this.db.run(turnoSql);
+                this.db.run(computadoraSql);
+                this.db.run(prestamoComputadoraSql, (err) => {
+                    if (err) reject(err);
+                    else {
+                        console.log('📘 Tablas creadas o ya existentes');
+                        resolve();
                     }
-                    
-                    // Crear tabla de entradas
-                    this.db.run(entriesSql, (err) => {
-                        if (err) {
-                            console.error('Error al crear la tabla nfc_entries:', err.message);
-                            reject(err);
-                        } else {
-                            console.log('Tablas creadas o ya existen');
-                            resolve();
-                        }
-                    });
                 });
             });
         });
     }
 
-    // ===== MÉTODOS PARA ESTUDIANTES =====
-
-    // Registrar un nuevo estudiante
-    registerStudent(studentData) {
+    // ================================
+    // 👤 USUARIOS
+    // ================================
+    registrarUsuario(data) {
         return new Promise((resolve, reject) => {
-            const { uid, dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia } = studentData;
-            
-            // Validar campos requeridos
-            if (!uid || !dni || !nombre || !apellido || !categoria) {
-                reject(new Error('UID, DNI, nombre, apellido y categoría son campos requeridos'));
+            const {
+                id_usuario, tipo_usuario, nombre_completo, email, telefono,
+                domicilio, codigo_postal, ciudad, provincia, sexo,
+                operador, uid_tarjeta, contrasena, legajo, carreras, materias
+            } = data;
+
+            if (!id_usuario || !tipo_usuario || !nombre_completo) {
+                reject(new Error('Faltan campos obligatorios'));
                 return;
             }
 
-            // Validar categoría
-            const categoriasValidas = ['Aspirante', 'Cursante', 'No cursante', 'Docente', 'No docente', 'Egresado', 'Externo'];
-            if (!categoriasValidas.includes(categoria)) {
-                reject(new Error('Categoría no válida'));
-                return;
-            }
-
             const sql = `
-                INSERT INTO students (uid, dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO usuario (
+                    id_usuario, tipo_usuario, nombre_completo, email, telefono, domicilio,
+                    codigo_postal, ciudad, provincia, sexo, operador, uid_tarjeta,
+                    contrasena, legajo, carreras, materias
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
-            this.db.run(sql, [uid, dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia], function(err) {
-                if (err) {
-                    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-                        reject(new Error('Ya existe un usuario con ese UID o DNI'));
-                    } else {
-                        reject(err);
-                    }
-                } else {
-                    console.log(`Usuario registrado: ${nombre} ${apellido} - Categoría: ${categoria}`);
-                    resolve({
-                        id: this.lastID,
-                        uid,
-                        dni,
-                        nombre,
-                        apellido,
-                        categoria,
-                        carrera,
-                        email,
-                        telefono,
-                        localidad,
-                        provincia
-                    });
+            this.db.run(sql, [
+                id_usuario, tipo_usuario, nombre_completo, email, telefono,
+                domicilio, codigo_postal, ciudad, provincia, sexo, operador, uid_tarjeta || null,
+                contrasena || null, legajo || null,
+                carreras ? JSON.stringify(carreras) : null,
+                materias ? JSON.stringify(materias) : null
+            ], function (err) {
+                if (err) reject(err);
+                else {
+                    console.log(`👤 Usuario registrado: ${nombre_completo}`);
+                    resolve({ id_usuario, nombre_completo });
                 }
             });
         });
     }
 
-    // Obtener todos los estudiantes
-    getAllStudents() {
+    obtenerUsuarios() {
         return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM students ORDER BY apellido, nombre';
-            
+            const sql = `SELECT * FROM usuario ORDER BY nombre_completo`;
             this.db.all(sql, [], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
+                if (err) reject(err);
+                else {
+                    const parsed = rows.map(u => ({
+                        ...u,
+                        carreras: u.carreras ? JSON.parse(u.carreras) : [],
+                        materias: u.materias ? JSON.parse(u.materias) : []
+                    }));
+                    resolve(parsed);
                 }
             });
         });
     }
 
-    // Obtener estudiante por UID
-    getStudentByUID(uid) {
+    obtenerUsuarioPorUID(uid_tarjeta) {
         return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM students WHERE uid = ?';
-            
-            this.db.get(sql, [uid], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
+            this.db.get('SELECT * FROM usuario WHERE uid_tarjeta = ?', [uid_tarjeta], (err, row) => {
+                if (err) reject(err);
+                else if (row) {
+                    row.carreras = row.carreras ? JSON.parse(row.carreras) : [];
+                    row.materias = row.materias ? JSON.parse(row.materias) : [];
                     resolve(row);
-                }
+                } else resolve(null);
             });
         });
     }
 
-    // Obtener estudiante por DNI
-    getStudentByDni(dni) {
+    eliminarUsuario(id_usuario) {
         return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM students WHERE dni = ?';
-            
-            this.db.get(sql, [dni], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
+            const sql = 'DELETE FROM usuario WHERE id_usuario = ?';
+            this.db.run(sql, [id_usuario], function (err) {
+                if (err) reject(err);
+                else resolve({ deletedRows: this.changes });
             });
         });
     }
 
-    // Actualizar datos de estudiante
-    updateStudent(uid, studentData) {
-        return new Promise((resolve, reject) => {
-            const { dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia, activo } = studentData;
-            
-            const sql = `
-                UPDATE students 
-                SET dni = ?, nombre = ?, apellido = ?, categoria = ?, carrera = ?, 
-                    email = ?, telefono = ?, localidad = ?, provincia = ?, activo = ?
-                WHERE uid = ?
-            `;
-
-            this.db.run(sql, [dni, nombre, apellido, categoria, carrera, email, telefono, localidad, provincia, activo, uid], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    console.log(`Estudiante actualizado: ${nombre} ${apellido} - UID: ${uid}`);
-                    resolve({ changes: this.changes });
-                }
-            });
-        });
-    }
-
-    // Eliminar estudiante
-    deleteStudent(uid) {
-        return new Promise((resolve, reject) => {
-            const sql = 'DELETE FROM students WHERE uid = ?';
-            
-            this.db.run(sql, [uid], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    console.log(`Estudiante eliminado - UID: ${uid}`);
-                    resolve({ deletedRows: this.changes });
-                }
-            });
-        });
-    }
-
-    // ===== MÉTODOS PARA ENTRADAS =====
-
-    // Método para insertar una nueva entrada independiente
-    insertEntry(uid) {
-        return new Promise((resolve, reject) => {
-            // Obtener fecha y hora local formateada
-            const now = new Date();
-            
-            // Formatear día como DD/MM/YYYY
-            const dia = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
-            
-            // Formatear hora como HH:MM:SS
-            const hora = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-            
-            // Formato completo para timestamp
-            const localDateTime = now.toISOString().replace('T', ' ').substring(0, 19);
-            
-            // Insertar nueva entrada con día y hora separados
-            const insertSql = 'INSERT INTO nfc_entries (uid, dia, hora, timestamp) VALUES (?, ?, ?, ?)';
-            
-            this.db.run(insertSql, [uid, dia, hora, localDateTime], function(err) {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                
-                // También actualizar la tabla nfc_cards para mantener compatibilidad
-                const selectSql = 'SELECT id, read_count FROM nfc_cards WHERE uid = ?';
-                
-                this.db.get(selectSql, [uid], (err, row) => {
-                    if (err) {
-                        console.error('Error al verificar tarjeta existente:', err.message);
-                    }
-
-                    if (row) {
-                        // UID existe, actualizar
-                        const updateSql = `
-                            UPDATE nfc_cards 
-                            SET last_seen = ?, read_count = read_count + 1 
-                            WHERE uid = ?
-                        `;
-                        
-                        this.db.run(updateSql, [localDateTime, uid], function(err) {
-                            if (err) {
-                                console.error('Error al actualizar tarjeta:', err.message);
-                            }
-                        });
-                    } else {
-                        // UID nuevo, insertar
-                        const insertCardSql = 'INSERT INTO nfc_cards (uid, first_seen, last_seen) VALUES (?, ?, ?)';
-                        
-                        this.db.run(insertCardSql, [uid, localDateTime, localDateTime], function(err) {
-                            if (err) {
-                                console.error('Error al insertar nueva tarjeta:', err.message);
-                            }
-                        });
-                    }
-                });
-                
-                console.log(`Nueva entrada para UID ${uid} registrada - Día: ${dia}, Hora: ${hora}`);
-                resolve({
-                    action: 'entry_recorded',
-                    uid: uid,
-                    id: this.lastID,
-                    dia: dia,
-                    hora: hora,
-                    timestamp: localDateTime
-                });
-            }.bind(this));
-        });
-    }
-
-    // Obtener todas las entradas con información del estudiante
-    getAllEntriesWithStudents() {
+    // ================================
+    // 📅 TURNOS
+    // ================================
+    registrarTurno({ fecha, hora, tipo_uso, id_usuario }) {
         return new Promise((resolve, reject) => {
             const sql = `
-                SELECT 
-                    e.*,
-                    s.nombre,
-                    s.apellido,
-                    s.dni,
-                    s.categoria,
-                    s.carrera
-                FROM nfc_entries e
-                LEFT JOIN students s ON e.uid = s.uid
-                ORDER BY e.timestamp DESC
+                INSERT INTO turno (fecha, hora, tipo_uso, id_usuario)
+                VALUES (?, ?, ?, ?)
             `;
-            
-            this.db.all(sql, [], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
+            this.db.run(sql, [fecha, hora, tipo_uso, id_usuario], function (err) {
+                if (err) reject(err);
+                else resolve({ id_turno: this.lastID });
             });
         });
     }
 
-    // Obtener todas las entradas individuales
-    getAllEntries() {
-        return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM nfc_entries ORDER BY timestamp DESC';
-            
-            this.db.all(sql, [], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
-    }
-
-    // Obtener entradas por UID
-    getEntriesByUID(uid) {
-        return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM nfc_entries WHERE uid = ? ORDER BY timestamp DESC';
-            
-            this.db.all(sql, [uid], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
-    }
-
-    // ===== MÉTODOS ORIGINALES MANTENIDOS =====
-
-    getAllCards() {
-        return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM nfc_cards ORDER BY last_seen DESC';
-            
-            this.db.all(sql, [], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
-    }
-
-    getCardByUID(uid) {
-        return new Promise((resolve, reject) => {
-            const sql = 'SELECT * FROM nfc_cards WHERE uid = ?';
-            
-            this.db.get(sql, [uid], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
-            });
-        });
-    }
-
-    deleteCard(uid) {
-        return new Promise((resolve, reject) => {
-            // Eliminar de todas las tablas
-            const deleteCardSql = 'DELETE FROM nfc_cards WHERE uid = ?';
-            const deleteEntriesSql = 'DELETE FROM nfc_entries WHERE uid = ?';
-            const deleteStudentSql = 'DELETE FROM students WHERE uid = ?';
-            
-            this.db.run(deleteCardSql, [uid], (err) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                
-                this.db.run(deleteEntriesSql, [uid], (err) => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
-                    
-                    this.db.run(deleteStudentSql, [uid], function(err) {
-                        if (err) {
-                            reject(err);
-                        } else {
-                            console.log(`UID ${uid} eliminado completamente de la base de datos`);
-                            resolve({ deletedRows: this.changes });
-                        }
-                    });
-                });
-            });
-        });
-    }
-
-    clearAllCards() {
-        return new Promise((resolve, reject) => {
-            // Limpiar todas las tablas
-            const clearCardsSql = 'DELETE FROM nfc_cards';
-            const clearEntriesSql = 'DELETE FROM nfc_entries';
-            const clearStudentsSql = 'DELETE FROM students';
-            
-            this.db.run(clearCardsSql, [], (err) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                
-                this.db.run(clearEntriesSql, [], (err) => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
-                    
-                    this.db.run(clearStudentsSql, [], function(err) {
-                        if (err) {
-                            reject(err);
-                        } else {
-                            console.log('🧹 Todas las tarjetas, entradas y estudiantes eliminados de la base de datos');
-                            resolve({ deletedRows: this.changes });
-                        }
-                    });
-                });
-            });
-        });
-    }
-
-    getStats() {
+    obtenerTurnos() {
         return new Promise((resolve, reject) => {
             const sql = `
-                SELECT 
-                    (SELECT COUNT(*) FROM nfc_cards) as total_cards,
-                    (SELECT COUNT(*) FROM nfc_entries) as total_entries,
-                    (SELECT COUNT(*) FROM students) as total_students,
-                    (SELECT MAX(timestamp) FROM nfc_entries) as last_activity
-                FROM nfc_cards LIMIT 1
+                SELECT t.*, u.nombre_completo
+                FROM turno t
+                LEFT JOIN usuario u ON t.id_usuario = u.id_usuario
+                ORDER BY fecha DESC, hora DESC
             `;
-            
-            this.db.get(sql, [], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row || { total_cards: 0, total_entries: 0, total_students: 0, last_activity: null });
+            this.db.all(sql, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    // ================================
+    // 💻 COMPUTADORAS
+    // ================================
+    registrarComputadora({ id_computadora, marca, modelo, estado, sistema_operativo, observacion }) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                INSERT INTO computadora (id_computadora, marca, modelo, estado, sistema_operativo, observacion)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `;
+            this.db.run(sql, [id_computadora, marca, modelo, estado, sistema_operativo, observacion], function (err) {
+                if (err) reject(err);
+                else {
+                    console.log(`💻 Computadora registrada: ${marca} ${modelo}`);
+                    resolve({ id_computadora });
                 }
             });
         });
     }
 
+    obtenerComputadoras() {
+        return new Promise((resolve, reject) => {
+            const sql = `SELECT * FROM computadora ORDER BY marca, modelo`;
+            this.db.all(sql, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    actualizarEstadoComputadora(id_computadora, nuevoEstado) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                UPDATE computadora
+                SET estado = ?
+                WHERE id_computadora = ?
+            `;
+            this.db.run(sql, [nuevoEstado, id_computadora], function (err) {
+                if (err) reject(err);
+                else resolve({ updated: this.changes });
+            });
+        });
+    }
+
+    // ================================
+    // 💻 PRÉSTAMOS DE COMPUTADORAS
+    // ================================
+    registrarPrestamoComputadora({ id_usuario, fecha, hora_inicio, operador, id_computadora }) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                INSERT INTO prestamo_computadora (id_usuario, fecha, hora_inicio, operador, id_computadora)
+                VALUES (?, ?, ?, ?, ?)
+            `;
+            this.db.run(sql, [id_usuario, fecha, hora_inicio, operador, id_computadora], function (err) {
+                if (err) reject(err);
+                else {
+                    console.log(`🖥️ Préstamo iniciado: Usuario ${id_usuario} → Computadora ${id_computadora}`);
+                    resolve({ id_prestamo_compu: this.lastID });
+                }
+            });
+        });
+    }
+
+    finalizarPrestamoComputadora(id_prestamo_compu, hora_fin) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                UPDATE prestamo_computadora
+                SET hora_fin = ?
+                WHERE id_prestamo_compu = ?
+            `;
+            this.db.run(sql, [hora_fin, id_prestamo_compu], function (err) {
+                if (err) reject(err);
+                else {
+                    console.log(`✅ Préstamo de computadora ${id_prestamo_compu} finalizado`);
+                    resolve({ updated: this.changes });
+                }
+            });
+        });
+    }
+
+    obtenerPrestamosComputadora() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT p.*, u.nombre_completo, c.marca, c.modelo
+                FROM prestamo_computadora p
+                JOIN usuario u ON p.id_usuario = u.id_usuario
+                JOIN computadora c ON p.id_computadora = c.id_computadora
+                ORDER BY p.fecha DESC, p.hora_inicio DESC
+            `;
+            this.db.all(sql, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    // ================================
+    // 🔒 Cierre
+    // ================================
     close() {
         return new Promise((resolve, reject) => {
             if (this.db) {
                 this.db.close((err) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        console.log('Conexión a la base de datos cerrada');
+                    if (err) reject(err);
+                    else {
+                        console.log('🔒 Conexión cerrada');
                         resolve();
                     }
                 });
-            } else {
-                resolve();
-            }
+            } else resolve();
         });
     }
 }

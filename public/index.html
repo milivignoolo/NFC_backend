@@ -309,6 +309,33 @@
             background-color: #6b7280;
         }
 
+        .status-inside {
+            background-color: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-outside {
+            background-color: #94a3b8;
+        }
+
+        .movement-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .movement-entrada {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .movement-salida {
+            background-color: #fef2f2;
+            color: #991b1b;
+        }
+
         /* Formularios */
         .form-container {
             background: rgba(255, 255, 255, 0.95);
@@ -505,6 +532,172 @@
             border-color: #667eea;
         }
 
+        /* Estilos específicos para usuarios activos */
+        .active-users-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .active-users-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .active-users-title {
+            color: #5a67d8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .active-users-count {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .active-users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .active-user-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #10b981;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .active-user-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .active-user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .active-user-details h4 {
+            color: #1e293b;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .active-user-details p {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin: 2px 0;
+        }
+
+        .force-exit-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .force-exit-btn:hover {
+            background: #d97706;
+        }
+
+        .occupancy-indicator {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .occupancy-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 5px;
+        }
+
+        .occupancy-label {
+            color: #64748b;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nfc-reader-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .nfc-reader-title {
+            color: #5a67d8;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .nfc-uid-display {
+            font-size: 1rem;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .nfc-uid-display:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .nfc-copy-button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin: 10px;
+        }
+
+        .nfc-copy-button:hover {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+        }
+
+        .nfc-status {
+            margin-top: 15px;
+            color: #666;
+            font-style: italic;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -550,66 +743,11 @@
                 width: 95%;
                 padding: 20px;
             }
+
+            .active-users-grid {
+                grid-template-columns: 1fr;
+            }
         }
-.nfc-reader-container {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 15px;
-  padding: 30px;
-  margin-bottom: 30px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  text-align: center;
-}
-
-.nfc-reader-title {
-  color: #5a67d8;
-  font-size: 1.8rem;
-  margin-bottom: 20px;
-  font-weight: bold;
-}
-
-.nfc-uid-display {
-  font-size: 1rem;
-  font-family: 'Segoe UI', 'Roboto', sans-serif;
-  background-color: #ffffff;
-  padding: 12px 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  display: inline-block;
-  margin-bottom: 20px;
-  color: #334155;
-  border: 1px solid #e2e8f0;
-  transition: box-shadow 0.3s ease;
-}
-
-.nfc-uid-display:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.nfc-copy-button {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s ease;
-  margin: 10px;
-}
-
-.nfc-copy-button:hover {
-  background: linear-gradient(135deg, #5a67d8, #6b46c1);
-}
-
-.nfc-status {
-  margin-top: 15px;
-  color: #666;
-  font-style: italic;
-}
-
-
     </style>
 </head>
 <body>
@@ -620,7 +758,7 @@
                 <i class="fas fa-wifi"></i>
                 Sistema de Control de Acceso NFC
             </h1>
-            <p>Biblioteca de la Facultad - Control de Ingresos</p>
+            <p>Biblioteca de la Facultad - Control de Ingresos y Salidas</p>
         </div>
 
         <!-- Alert Container -->
@@ -649,6 +787,11 @@
                 <div class="stat-label">Accesos Hoy</div>
             </div>
             <div class="stat-card">
+                <i class="fas fa-door-open"></i>
+                <div class="stat-number" id="peopleInside">-</div>
+                <div class="stat-label">Personas Dentro</div>
+            </div>
+            <div class="stat-card">
                 <div class="status-indicator" id="systemStatus"></div>
                 <div class="stat-number" id="lastActivity">-</div>
                 <div class="stat-label">Última Actividad</div>
@@ -658,7 +801,10 @@
         <!-- Tabs -->
         <div class="tabs">
             <div class="tab-buttons">
-                <button class="tab-button active" onclick="showTab('students')">
+                <button class="tab-button active" onclick="showTab('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+                <button class="tab-button" onclick="showTab('students')">
                     <i class="fas fa-users"></i> Usuarios
                 </button>
                 <button class="tab-button" onclick="showTab('entries')">
@@ -670,56 +816,63 @@
             </div>
         </div>
 
+        <!-- Tab: Dashboard -->
+        <div id="dashboard-tab" class="tab-content active">
+            
+
+            <!-- Usuarios actualmente dentro -->
+            <div class="active-users-container">
+                <div class="active-users-header">
+                    <h3 class="active-users-title">
+                        <i class="fas fa-user-check"></i>
+                        Usuarios Actualmente Dentro
+                    </h3>
+                    <div class="active-users-count" id="activeUsersCount">0</div>
+                </div>
+                <div id="activeUsersContainer">
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <p>Cargando usuarios activos...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles del dashboard -->
+            <div class="controls">
+                <h3><i class="fas fa-tools"></i> Controles Rápidos</h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="loadDashboard()">
+                        <i class="fas fa-sync-alt"></i> Actualizar Dashboard
+                    </button>
+                    <button class="btn btn-danger" onclick="resetAllStates()">
+                        <i class="fas fa-undo"></i> Resetear Estados
+                    </button>
+                    <button class="btn btn-success" onclick="exportActiveUsers()">
+                        <i class="fas fa-download"></i> Exportar Usuarios Activos
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: Usuarios -->
-        <div id="students-tab" class="tab-content active">
+        <div id="students-tab" class="tab-content">
             <div class="nfc-reader-container">
-                <h1 class="nfc-reader-title">Lectura de Tarjeta NFC</h1>
+                <h1 class="nfc-reader-title">Verificar Último UID</h1>
               
-                <button id="leerNFC" class="nfc-copy-button">Leer Tarjeta</button>
+                <div style="margin-bottom: 20px;">
+                    <p style="color: #666; margin-bottom: 10px;">Último UID detectado en registros de acceso:</p>
+                    <div id="ultimoUID" style="font-family: 'Courier New', monospace; background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: #1e293b;">
+                        Cargando...
+                    </div>
+                    <button id="verificarUID" class="nfc-copy-button">Verificar</button>
+                </div>
               
-                <p id="resultado" class="nfc-uid-display">Esperando lectura...</p>
+                <p id="resultado" class="nfc-uid-display">Presiona verificar para comprobar el último UID</p>
               
-                <button id="copiar" class="nfc-copy-button" disabled>Copiar ID</button>
+                <button id="copiar" class="nfc-copy-button" disabled>Copiar UID</button>
               
-                <p class="nfc-status">Acercá una tarjeta al lector</p>
-              
-                <script>
-                  const btnLeer = document.getElementById('leerNFC');
-                  const resultado = document.getElementById('resultado');
-                  const btnCopiar = document.getElementById('copiar');
-                  let ultimoIdLeido = '';
-              
-                  btnLeer.addEventListener('click', async () => {
-                    if ('NDEFReader' in window) {
-                      try {
-                        const ndef = new NDEFReader();
-                        await ndef.scan();
-              
-                        resultado.textContent = "Esperando una tarjeta...";
-              
-                        ndef.onreading = event => {
-                          const id = event.serialNumber || "(ID no disponible)";
-                          ultimoIdLeido = id;
-                          resultado.textContent = `ID leído: ${id}`;
-                          btnCopiar.disabled = false;
-                        };
-                      } catch (error) {
-                        resultado.textContent = `Error al leer NFC: ${error}`;
-                      }
-                    } else {
-                      resultado.textContent = 'Tu navegador no soporta NFC.';
-                    }
-                  });
-              
-                  btnCopiar.addEventListener('click', () => {
-                    if (ultimoIdLeido) {
-                      navigator.clipboard.writeText(ultimoIdLeido)
-                        .then(() => alert('ID copiado al portapapeles'))
-                        .catch(err => alert('Error al copiar: ' + err));
-                    }
-                  });
-                </script>
-              </div>
+                <p class="nfc-status">Verifica automáticamente el último UID registrado</p>
+            </div>
               
             <!-- Formulario de registro -->
             <div class="form-container">
@@ -831,6 +984,7 @@
                                 <th><i class="fas fa-users"></i> Categoría</th>
                                 <th><i class="fas fa-graduation-cap"></i> Carrera</th>
                                 <th><i class="fas fa-id-card"></i> UID</th>
+                                <th><i class="fas fa-toggle-on"></i> Estado</th>
                                 <th><i class="fas fa-map-marker-alt"></i> Ubicación</th>
                                 <th><i class="fas fa-calendar"></i> Registro</th>
                                 <th><i class="fas fa-cogs"></i> Acciones</th>
@@ -880,6 +1034,7 @@
                                 <th><i class="fas fa-hashtag"></i> ID</th>
                                 <th><i class="fas fa-user"></i> Usuario</th>
                                 <th><i class="fas fa-id-card"></i> UID</th>
+                                <th><i class="fas fa-exchange-alt"></i> Movimiento</th>
                                 <th><i class="fas fa-calendar"></i> Día</th>
                                 <th><i class="fas fa-clock"></i> Hora</th>
                                 <th><i class="fas fa-timestamp"></i> Timestamp</th>
@@ -904,6 +1059,9 @@
                     </button>
                     <button class="btn btn-primary" onclick="loadData()">
                         <i class="fas fa-sync-alt"></i> Actualizar Datos
+                    </button>
+                    <button class="btn btn-warning" onclick="resetAllStates()">
+                        <i class="fas fa-undo"></i> Resetear Estados de Usuarios
                     </button>
                 </div>
             </div>
@@ -1008,6 +1166,7 @@
         let filteredEntries = [];
         let allStudents = [];
         let filteredStudents = [];
+        let activeUsers = [];
         let currentEntriesPage = 1;
         let currentStudentsPage = 1;
         const entriesPerPage = 20;
@@ -1016,9 +1175,117 @@
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
-            // Auto-refresh every 30 seconds
-            setInterval(loadData, 30000);
+            // Auto-refresh cada 10 segundos
+            setInterval(loadData, 10000);
+            
+            // Auto-refresh del último UID cada 5 segundos
+            setInterval(() => {
+        if (window.updateUIDDisplay) {
+        window.updateUIDDisplay();
+         }
+        }, 5000);
+
+            // Setup NFC reader
+            setupNFCReader();
         });
+
+// Setup UID Verificator
+function setupNFCReader() {
+    const ultimoUIDDisplay = document.getElementById('ultimoUID');
+    const btnVerificar = document.getElementById('verificarUID');
+    const resultado = document.getElementById('resultado');
+    const btnCopiar = document.getElementById('copiar');
+    let ultimoIdVerificado = '';
+    let isCardRegistered = false;
+
+    // Obtener el último UID de la tabla de registros de acceso
+    function getLastUID() {
+        if (allEntries && allEntries.length > 0) {
+            // Los registros ya están ordenados por timestamp DESC, tomar el primero
+            return allEntries[0].uid;
+        }
+        return null;
+    }
+
+    // Mostrar el último UID
+    function displayLastUID() {
+        const lastUID = getLastUID();
+        if (lastUID) {
+            ultimoUIDDisplay.textContent = lastUID;
+        } else {
+            ultimoUIDDisplay.textContent = 'No hay registros disponibles';
+        }
+    }
+
+    // Mostrar último UID al inicio
+    displayLastUID();
+
+    // Verificar último UID
+    btnVerificar.addEventListener('click', async () => {
+        const uid = getLastUID();
+        
+        if (!uid) {
+            resultado.innerHTML = '<span style="color: #f59e0b;">No hay registros de acceso disponibles</span>';
+            btnCopiar.disabled = true;
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/students/uid/${uid}`);
+            
+            if (response.ok) {
+                // La tarjeta está registrada
+                const student = await response.json();
+                isCardRegistered = true;
+                resultado.innerHTML = `
+                    <span style="color: #ef4444; font-weight: bold;">
+                        TARJETA REGISTRADA
+                    </span>
+                    <br>
+                    <small style="color: #666;">
+                        Usuario: ${student.nombre} ${student.apellido}
+                    </small>
+                `;
+                btnCopiar.disabled = true;
+                ultimoIdVerificado = '';
+            } else if (response.status === 404) {
+                // La tarjeta NO está registrada - puede usarse
+                isCardRegistered = false;
+                ultimoIdVerificado = uid;
+                resultado.innerHTML = `
+                    <span style="color: #10b981; font-weight: bold;">
+                        UID DISPONIBLE
+                    </span>
+                    <br>
+                    <span style="font-family: 'Courier New', monospace;">
+                        ${uid}
+                    </span>
+                `;
+                btnCopiar.disabled = false;
+            } else {
+                throw new Error('Error verificando UID');
+            }
+        } catch (error) {
+            console.error('Error verificando UID:', error);
+            resultado.innerHTML = `<span style="color: #f59e0b;">Error verificando UID</span>`;
+            btnCopiar.disabled = true;
+        }
+    });
+
+    btnCopiar.addEventListener('click', () => {
+        if (ultimoIdVerificado && !isCardRegistered) {
+            navigator.clipboard.writeText(ultimoIdVerificado)
+                .then(() => {
+                    showAlert('UID copiado al portapapeles', 'success');
+                    document.getElementById('uid').value = ultimoIdVerificado;
+                })
+                .catch(err => showAlert('Error al copiar: ' + err, 'error'));
+        }
+    });
+
+    // Función para actualizar cuando se cargan nuevos datos
+    window.updateUIDDisplay = displayLastUID;
+}
 
         // Tab management
         function showTab(tabName) {
@@ -1039,7 +1306,9 @@
             event.target.classList.add('active');
             
             // Load data for the tab
-            if (tabName === 'students') {
+            if (tabName === 'dashboard') {
+                loadDashboard();
+            } else if (tabName === 'students') {
                 loadStudents();
             } else if (tabName === 'entries') {
                 loadEntries();
@@ -1049,20 +1318,158 @@
         // Load all data
         async function loadData() {
             try {
-                showAlert('Actualizando datos...', 'info');
-                
                 await Promise.all([
                     loadStats(),
                     loadStudents(),
-                    loadEntries()
+                    loadEntries(),
+                    loadActiveUsers()
                 ]);
-                
-                hideAlert();
             } catch (error) {
-                console.error('Error registering student:', error);
-                showAlert(error.message, 'error');
+                console.error('Error loading data:', error);
+                showAlert('Error al cargar los datos', 'error');
             }
-        };
+        }
+
+        // Load dashboard
+        async function loadDashboard() {
+            try {
+                await Promise.all([
+                    loadStats(),
+                    loadActiveUsers()
+                ]);
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showAlert('Error al cargar el dashboard', 'error');
+            }
+        }
+
+        // Load active users
+        async function loadActiveUsers() {
+            try {
+                const response = await fetch('/api/students/active');
+                if (!response.ok) throw new Error('Error fetching active users');
+                
+                activeUsers = await response.json();
+                updateActiveUsersDisplay();
+            } catch (error) {
+                console.error('Error loading active users:', error);
+                showAlert('Error al cargar usuarios activos', 'error');
+            }
+        }
+
+        // Update active users display
+        function updateActiveUsersDisplay() {
+            const container = document.getElementById('activeUsersContainer');
+            const countElement = document.getElementById('activeUsersCount');
+            
+            countElement.textContent = activeUsers.length;
+
+            if (activeUsers.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <br>No hay usuarios dentro de la biblioteca
+                    </div>
+                `;
+            } else {
+                const cardsHTML = activeUsers.map(user => `
+                    <div class="active-user-card">
+                        <div class="active-user-info">
+                            <div class="active-user-details">
+                                <h4>${user.nombre} ${user.apellido}</h4>
+                                <p><strong>DNI:</strong> ${user.dni}</p>
+                                <p><strong>Categoría:</strong> ${user.categoria}</p>
+                                ${user.carrera ? `<p><strong>Carrera:</strong> ${user.carrera}</p>` : ''}
+                                <p><strong>Último acceso:</strong> ${user.ultimo_acceso ? new Date(user.ultimo_acceso).toLocaleString('es-ES') : 'N/A'}</p>
+                            </div>
+                            <button class="force-exit-btn" onclick="forceExit('${user.uid}')" title="Forzar salida">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = `<div class="active-users-grid">${cardsHTML}</div>`;
+            }
+        }
+
+        // Force exit for a user
+        async function forceExit(uid) {
+            if (!confirm('¿Está seguro de que quiere forzar la salida de este usuario?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/students/${uid}/force-exit`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Error al forzar salida');
+
+                const data = await response.json();
+                showAlert(data.message, 'success');
+                await loadDashboard();
+                await loadStats();
+            } catch (error) {
+                console.error('Error forcing exit:', error);
+                showAlert('Error al forzar la salida', 'error');
+            }
+        }
+
+        // Reset all user states
+        async function resetAllStates() {
+            if (!confirm('¿Está seguro de que quiere marcar a todos los usuarios como "fuera"? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/reset-states', {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Error al resetear estados');
+
+                const data = await response.json();
+                showAlert(data.message, 'success');
+                await loadData();
+            } catch (error) {
+                console.error('Error resetting states:', error);
+                showAlert('Error al resetear los estados', 'error');
+            }
+        }
+
+        // Export active users
+        function exportActiveUsers() {
+            if (activeUsers.length === 0) {
+                showAlert('No hay usuarios activos para exportar', 'error');
+                return;
+            }
+
+            const csvContent = [
+                ['Nombre', 'Apellido', 'DNI', 'Categoría', 'Carrera', 'UID', 'Último Acceso'],
+                ...activeUsers.map(user => [
+                    user.nombre,
+                    user.apellido,
+                    user.dni,
+                    user.categoria,
+                    user.carrera || '',
+                    user.uid,
+                    user.ultimo_acceso ? new Date(user.ultimo_acceso).toLocaleString('es-ES') : ''
+                ])
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `usuarios_activos_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('Usuarios activos exportados exitosamente', 'success');
+        }
 
         // Clear form
         function clearForm() {
@@ -1079,38 +1486,53 @@
             if (pageStudents.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="empty-state">
+                        <td colspan="8" class="empty-state">
                             <i class="fas fa-users"></i>
                             <br>No hay usuarios registrados
                         </td>
                     </tr>
                 `;
             } else {
-                tbody.innerHTML = pageStudents.map(student => `
-                    <tr>
-                        <td>
-                            <div class="student-name">${student.nombre} ${student.apellido}</div>
-                            <div class="student-info">DNI: ${student.dni}</div>
-                            ${student.email ? `<div class="student-info">${student.email}</div>` : ''}
-                        </td>
-                        <td>${student.categoria}</td>
-                        <td>${student.carrera || 'N/A'}</td>
-                        <td><span class="uid-cell">${student.uid}</span></td>
-                        <td>
-                            ${student.localidad || ''}
-                            ${student.provincia ? `<div class="student-info">${student.provincia}</div>` : ''}
-                        </td>
-                        <td>${new Date(student.fecha_registro).toLocaleDateString('es-ES')}</td>
-                        <td>
-                            <button class="btn btn-primary" onclick="editStudent('${student.uid}')" style="margin-right: 5px; padding: 8px 12px;">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteStudent('${student.uid}')" style="padding: 8px 12px;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = pageStudents.map(student => {
+                    const isInside = student.estado_actual === 'dentro';
+                    const statusClass = isInside ? 'status-inside' : 'status-outside';
+                    const statusText = isInside ? 'Dentro' : 'Fuera';
+                    
+                    return `
+                        <tr>
+                            <td>
+                                <div class="student-name">${student.nombre} ${student.apellido}</div>
+                                <div class="student-info">DNI: ${student.dni}</div>
+                                ${student.email ? `<div class="student-info">${student.email}</div>` : ''}
+                            </td>
+                            <td>${student.categoria}</td>
+                            <td>${student.carrera || 'N/A'}</td>
+                            <td><span class="uid-cell">${student.uid}</span></td>
+                            <td>
+                                <span class="status-indicator ${statusClass}"></span>
+                                ${statusText}
+                            </td>
+                            <td>
+                                ${student.localidad || ''}
+                                ${student.provincia ? `<div class="student-info">${student.provincia}</div>` : ''}
+                            </td>
+                            <td>${new Date(student.fecha_registro).toLocaleDateString('es-ES')}</td>
+                            <td>
+                                <button class="btn btn-primary" onclick="editStudent('${student.uid}')" style="margin-right: 5px; padding: 8px 12px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger" onclick="deleteStudent('${student.uid}')" style="padding: 8px 12px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                ${isInside ? `
+                                    <button class="btn btn-warning" onclick="forceExit('${student.uid}')" style="margin-left: 5px; padding: 8px 12px;" title="Forzar salida">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                    </button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
 
             updateStudentsPagination();
@@ -1285,6 +1707,7 @@
                 showAlert('Usuario eliminado exitosamente', 'success');
                 await loadStudents();
                 await loadStats();
+                await loadActiveUsers();
             } catch (error) {
                 console.error('Error deleting student:', error);
                 showAlert('Error al eliminar el usuario', 'error');
@@ -1304,6 +1727,10 @@
                 
                 updateEntriesTable();
                 updateRecordCount();
+               // Actualizar display del último UID si existe
+               if (window.updateUIDDisplay) {
+                window.updateUIDDisplay();
+            }
             } catch (error) {
                 console.error('Error loading entries:', error);
                 showAlert('Error al cargar las entradas', 'error');
@@ -1320,7 +1747,7 @@
             if (pageEntries.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="empty-state">
+                        <td colspan="7" class="empty-state">
                             <i class="fas fa-inbox"></i>
                             <br>No hay registros para mostrar
                         </td>
@@ -1335,12 +1762,21 @@
                             <div class="student-info">${entry.categoria} - ${entry.carrera || 'Sin carrera'}</div>
                         `;
                     }
+
+                    const movementClass = entry.tipo_movimiento === 'entrada' ? 'movement-entrada' : 'movement-salida';
+                    const movementIcon = entry.tipo_movimiento === 'entrada' ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
                     
                     return `
                         <tr>
                             <td>${entry.id}</td>
                             <td>${studentInfo}</td>
                             <td><span class="uid-cell">${entry.uid}</span></td>
+                            <td>
+                                <span class="movement-type ${movementClass}">
+                                    <i class="fas ${movementIcon}"></i>
+                                    ${entry.tipo_movimiento}
+                                </span>
+                            </td>
                             <td>${entry.dia}</td>
                             <td>${entry.hora}</td>
                             <td>${new Date(entry.timestamp).toLocaleString('es-ES')}</td>
@@ -1411,6 +1847,7 @@
                     entry.uid.toLowerCase().includes(searchTerm) ||
                     entry.dia.includes(searchTerm) ||
                     entry.hora.includes(searchTerm) ||
+                    entry.tipo_movimiento.toLowerCase().includes(searchTerm) ||
                     (entry.nombre && entry.nombre.toLowerCase().includes(searchTerm)) ||
                     (entry.apellido && entry.apellido.toLowerCase().includes(searchTerm)) ||
                     (entry.dni && entry.dni.toLowerCase().includes(searchTerm))
@@ -1439,7 +1876,7 @@
             }
 
             const csvContent = [
-                ['ID', 'Usuario', 'DNI', 'Categoría', 'Carrera', 'UID', 'Día', 'Hora', 'Timestamp'],
+                ['ID', 'Usuario', 'DNI', 'Categoría', 'Carrera', 'UID', 'Movimiento', 'Día', 'Hora', 'Timestamp'],
                 ...filteredEntries.map(entry => [
                     entry.id,
                     entry.nombre && entry.apellido ? `${entry.nombre} ${entry.apellido}` : 'No registrado',
@@ -1447,6 +1884,7 @@
                     entry.categoria || '',
                     entry.carrera || '',
                     entry.uid,
+                    entry.tipo_movimiento,
                     entry.dia,
                     entry.hora,
                     entry.timestamp
@@ -1466,24 +1904,32 @@
             showAlert('Datos exportados exitosamente', 'success');
         }
 
-        // Clear all data
-        async function clearAllData() {
-            if (!confirm('¿Estás seguro de que quieres eliminar todos los registros y usuarios? Esta acción no se puede deshacer.')) {
+// Clear all data
+async function clearAllData() {
+            if (!confirm('¿Estás seguro de que quieres eliminar TODOS los registros, usuarios y tarjetas? Esta acción no se puede deshacer.')) {
                 return;
             }
 
             try {
-                const response = await fetch('/api/cards', {
+                // Eliminar todas las tarjetas y entradas
+                const cardsResponse = await fetch('/api/cards', {
                     method: 'DELETE'
                 });
 
-                if (!response.ok) throw new Error('Error clearing data');
+                if (!cardsResponse.ok) throw new Error('Error clearing cards data');
 
-                showAlert('Todos los registros han sido eliminados', 'success');
+                // Eliminar todos los usuarios
+                const studentsResponse = await fetch('/api/students', {
+                    method: 'DELETE'
+                });
+
+                if (!studentsResponse.ok) throw new Error('Error clearing students data');
+
+                showAlert('Todos los registros, usuarios y tarjetas han sido eliminados', 'success');
                 await loadData();
             } catch (error) {
-                console.error('Error clearing data:', error);
-                showAlert('Error al eliminar los registros', 'error');
+                console.error('Error clearing all data:', error);
+                showAlert('Error al eliminar todos los datos: ' + error.message, 'error');
             }
         }
 
@@ -1498,10 +1944,11 @@
                 document.getElementById('totalStudents').textContent = stats.total_students;
                 document.getElementById('totalCards').textContent = stats.total_cards;
                 document.getElementById('totalEntries').textContent = stats.total_entries;
+                document.getElementById('peopleInside').textContent = stats.personas_dentro;
                 
                 // Calculate today's entries
-                const today = new Date().toISOString().split('T')[0];
-                const todayEntries = allEntries.filter(entry => entry.timestamp.includes(today)).length;
+                const today = new Date().toLocaleDateString('es-ES');
+                const todayEntries = allEntries.filter(entry => entry.dia === today).length;
                 document.getElementById('todayEntries').textContent = todayEntries;
                 
                 // Update last activity
@@ -1564,13 +2011,11 @@
                     ${message}
                 </div>
             `;
-        }
-
-        // Hide alert
-        function hideAlert() {
+            
+            // Auto-hide after 5 seconds
             setTimeout(() => {
-                document.getElementById('alertContainer').innerHTML = '';
-            }, 3000);
+                alertContainer.innerHTML = '';
+            }, 5000);
         }
 
         // Add event listeners for Enter key in search inputs
@@ -1620,7 +2065,10 @@
                     body: JSON.stringify(studentData)
                 });
                 
-                if (!response.ok) throw new Error('Error registering student');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error registering student');
+                }
                 
                 const data = await response.json();
                 showAlert('Usuario registrado exitosamente', 'success');
@@ -1632,6 +2080,40 @@
                 showAlert(error.message, 'error');
             }
         });
+
+    // Auto-reset all user states at midnight
+function checkDailyReset() {
+    const now = new Date();
+    const lastResetDate = localStorage.getItem('lastResetDate');
+    const today = now.toDateString();
+    
+    // Si es un nuevo día y no se ha hecho reset hoy
+    if (lastResetDate !== today && now.getHours() === 0 && now.getMinutes() === 0) {
+        resetAllStatesAuto();
+        localStorage.setItem('lastResetDate', today);
+    }
+}
+
+// Reset automático sin confirmación
+async function resetAllStatesAuto() {
+    try {
+        const response = await fetch('/api/reset-states', {
+            method: 'POST'
+        });
+
+        if (!response.ok) throw new Error('Error al resetear estados');
+
+        const data = await response.json();
+        console.log('Reset automático realizado:', data.message);
+        await loadData();
+    } catch (error) {
+        console.error('Error en reset automático:', error);
+    }
+}
+
+// Verificar reset cada minuto
+setInterval(checkDailyReset, 60000);
+
     </script>
 </body>
 </html>

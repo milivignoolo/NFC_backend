@@ -236,6 +236,19 @@ class NFCDatabase {
         });
     }
 
+    obtenerUsuarioPorDNI(id_usuario) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM usuario WHERE id_usuario = ?', [id_usuario], (err, row) => {
+                if (err) reject(err);
+                else if (row) {
+                    row.carreras = row.carreras ? JSON.parse(row.carreras) : [];
+                    row.materias = row.materias ? JSON.parse(row.materias) : [];
+                    resolve(row);
+                } else resolve(null);
+            });
+        });
+    }
+
     eliminarUsuario(id_usuario) {
         return new Promise((resolve, reject) => {
             const sql = 'DELETE FROM usuario WHERE id_usuario = ?';

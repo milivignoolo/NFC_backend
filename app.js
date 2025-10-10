@@ -57,6 +57,17 @@ app.get('/api/usuarios/uid/:uid', async (req, res) => {
   }
 });
 
+app.get('/api/usuarios/id_usuario/:id_usuario', async (req, res) => {
+  try {
+    const usuario = await db.obtenerUsuarioPorDNI(req.params.id_usuario);
+    if (usuario) res.json(usuario);
+    else res.status(404).json({ error: 'Usuario no encontrado' });
+  } catch (error) {
+    console.error('Error al obtener usuario por ID Usuario:', error);
+    res.status(500).json({ error: 'Error al obtener usuario' });
+  }
+});
+
 app.delete('/api/usuarios/:id', async (req, res) => {
   try {
     const result = await db.eliminarUsuario(req.params.id);
@@ -162,14 +173,32 @@ app.put('/api/prestamos-computadora/:id/finalizar', async (req, res) => {
 // ==========================
 let sseClients = [];
 
+// Función para enviar mensajes a todos los clientes SSE
+function broadcastSSE(data) {
+  const message = `data: ${JSON.stringify(data)}\n\n`;
+  sseClients.forEach(client => {
+    try {
+      client.res.write(message);
+    } catch (error) {
+      console.error('Error enviando SSE:', error);
+      // Remover cliente si hay error
+      sseClients = sseClients.filter(c => c.id !== client.id);
+    }
+  });
+}
+
 app.get('/api/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
 
   const clientId = Date.now();
   sseClients.push({ id: clientId, res });
   console.log(`👥 Cliente SSE conectado (${clientId})`);
+
+  // Enviar mensaje de conexión
+  res.write(`data: ${JSON.stringify({ type: 'connected', clientId })}\n\n`);
 
   req.on('close', () => {
     sseClients = sseClients.filter(c => c.id !== clientId);

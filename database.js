@@ -104,9 +104,13 @@ class NFCDatabase {
                     id_entrada INTEGER PRIMARY KEY AUTOINCREMENT,
                     fecha TEXT NOT NULL,
                     hora TEXT NOT NULL,
+                    accion TEXT,
                     tipo_uso TEXT,
                     observacion TEXT,
-                    id_usuario TEXT NOT NULL,
+                    id_usuario TEXT,
+                    id_libro TEXT,
+                    id_computadora TEXT,
+                    uid_tarjeta TEXT,
                     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
                 )
             `;
@@ -154,12 +158,36 @@ class NFCDatabase {
                 this.db.run(entradaSql);
                 this.db.run(turnoSql);
                 this.db.run(computadoraSql);
-                this.db.run(prestamoComputadoraSql, (err) => {
-                    if (err) reject(err);
-                    else {
-                        console.log('📘 Tablas creadas o ya existentes');
+                this.db.run(prestamoComputadoraSql, async (err) => {
+                    if (err) return reject(err);
+
+                    try {
+                        // Ensure missing columns for backward compatibility
+                        await this._ensureColumn('turno', 'estado', "TEXT DEFAULT 'pendiente'");
+                        await this._ensureColumn('libro', 'isbn', 'TEXT');
+                        await this._ensureColumn('libro', 'uid_tarjeta', 'TEXT');
+                        await this._ensureColumn('computadora', 'estado', "TEXT DEFAULT 'disponible'");
+                        await this._ensureColumn('usuario', 'uid_tarjeta', 'TEXT');
+                        console.log('📘 Tablas creadas/actualizadas');
                         resolve();
+                    } catch (e) {
+                        reject(e);
                     }
+                });
+            });
+        });
+    }
+
+    _ensureColumn(table, column, typeDef) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`PRAGMA table_info(${table})`, [], (err, rows) => {
+                if (err) return reject(err);
+                const exists = rows.some(r => r.name === column);
+                if (exists) return resolve(false);
+                const sql = `ALTER TABLE ${table} ADD COLUMN ${column} ${typeDef}`;
+                this.db.run(sql, [], function (alterErr) {
+                    if (alterErr) return reject(alterErr);
+                    resolve(true);
                 });
             });
         });
@@ -202,6 +230,45 @@ class NFCDatabase {
                     console.log(`👤 Usuario registrado: ${nombre_completo}`);
                     resolve({ id_usuario, nombre_completo });
                 }
+            });
+        });
+    }
+
+    async recuperarLogin(id_usuario, contrasena) {
+        return new Promise((resolve, reject) => {
+            const sql = `SELECT id_usuario, nombre_completo, tipo_usuario FROM usuario WHERE id_usuario = ? AND contrasena = ?`;
+            this.db.get(sql, [id_usuario, contrasena], (err, row) => {
+                if (err) return reject(err);
+                resolve(row || null);
+            });
+        });
+    }
+
+    async usuarioExistePorId(id_usuario) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT 1 FROM usuario WHERE id_usuario = ? LIMIT 1', [id_usuario], (err, row) => {
+                if (err) return reject(err);
+                resolve(!!row);
+            });
+        });
+    }
+
+    async usuarioExistePorLegajo(legajo) {
+        if (!legajo) return false;
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT 1 FROM usuario WHERE legajo = ? LIMIT 1', [legajo], (err, row) => {
+                if (err) return reject(err);
+                resolve(!!row);
+            });
+        });
+    }
+
+    async usuarioExistePorUID(uid_tarjeta) {
+        if (!uid_tarjeta) return false;
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT 1 FROM usuario WHERE uid_tarjeta = ? LIMIT 1', [uid_tarjeta], (err, row) => {
+                if (err) return reject(err);
+                resolve(!!row);
             });
         });
     }
@@ -330,6 +397,140 @@ class NFCDatabase {
                 if (err) reject(err);
                 else resolve({ updated: this.changes });
             });
+        });
+    }
+
+    // ================================
+    // 📚 LIBROS
+    // ================================
+    registrarLibro(data) {
+        return new Promise((resolve, reject) => {
+            const {
+                id_libro, titulo, sub_titulo, signatura, autor, segundo_autor, tercer_autor,
+                isbn, serie, editorial, edicion, lugar, anio, cant_paginas, tamano,
+                idioma, origen, ubicacion, nivel, dias_de_prestamo, palabra_clave, observaciones, uid_tarjeta
+            } = data;
+
+            if (!id_libro || !titulo) return reject(new Error('Faltan campos obligatorios para libro'));
+
+            const sql = `
+                INSERT INTO libro (
+                    id_libro, titulo, sub_titulo, signatura, autor, segundo_autor, tercer_autor,
+                    isbn, serie, editorial, edicion, lugar, anio, cant_paginas, tamano,
+                    idioma, origen, ubicacion, nivel, dias_de_prestamo, palabra_clave, observaciones, uid_tarjeta
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(sql, [
+                id_libro, titulo, sub_titulo || null, signatura || null, autor || null, segundo_autor || null, tercer_autor || null,
+                isbn || null, serie || null, editorial || null, edicion || null, lugar || null, anio || null, cant_paginas || null, tamano || null,
+                idioma || null, origen || null, ubicacion || null, nivel || null, dias_de_prestamo || 7, palabra_clave || null, observaciones || null, uid_tarjeta || null
+            ], function (err) {
+                if (err) return reject(err);
+                resolve({ id_libro });
+            });
+        });
+    }
+
+    obtenerLibros() {
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM libro ORDER BY titulo', [], (err, rows) => {
+                if (err) return reject(err);
+                resolve(rows);
+            });
+        });
+    }
+
+    libroExistePorId(id_libro) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT 1 FROM libro WHERE id_libro = ? LIMIT 1', [id_libro], (err, row) => {
+                if (err) return reject(err);
+                resolve(!!row);
+            });
+        });
+    }
+
+    libroExistePorISBN(isbn) {
+        if (!isbn) return Promise.resolve(false);
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT 1 FROM libro WHERE isbn = ? LIMIT 1', [isbn], (err, row) => {
+                if (err) return reject(err);
+                resolve(!!row);
+            });
+        });
+    }
+
+    libroExistePorUID(uid_tarjeta) {
+        if (!uid_tarjeta) return Promise.resolve(false);
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT 1 FROM libro WHERE uid_tarjeta = ? LIMIT 1', [uid_tarjeta], (err, row) => {
+                if (err) return reject(err);
+                resolve(!!row);
+            });
+        });
+    }
+
+    // ================================
+    // 🪪 NFC / ENTRADAS
+    // ================================
+    registrarLecturaNFC(uid_tarjeta) {
+        return new Promise(async (resolve, reject) => {
+            if (!uid_tarjeta) return reject(new Error('Falta UID'));
+            try {
+                const usuario = await new Promise((res, rej) => {
+                    this.db.get('SELECT * FROM usuario WHERE uid_tarjeta = ?', [uid_tarjeta], (err, row) => {
+                        if (err) return rej(err);
+                        res(row || null);
+                    });
+                });
+
+                if (!usuario) return reject(new Error('UID no asociado a usuario'));
+
+                const now = new Date();
+                const fecha = now.toISOString().slice(0, 10);
+                const hora = now.toTimeString().slice(0, 8);
+
+                const sql = `
+                    INSERT INTO entrada (fecha, hora, accion, tipo_uso, observacion, id_usuario, uid_tarjeta)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                `;
+                this.db.run(sql, [
+                    fecha, hora, 'entrada', 'sala', null, usuario.id_usuario, uid_tarjeta
+                ], function (err) {
+                    if (err) return reject(err);
+                    resolve({ id_entrada: this.lastID, fecha, hora, id_usuario: usuario.id_usuario, uid_tarjeta });
+                });
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    getUltimoUID() {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM entrada ORDER BY id_entrada DESC LIMIT 1', [], (err, row) => {
+                if (err) return reject(err);
+                resolve(row || null);
+            });
+        });
+    }
+
+    actualizarTurnosPendientes() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await this._ensureColumn('turno', 'estado', "TEXT DEFAULT 'pendiente'");
+                const sql = `
+                    UPDATE turno
+                    SET estado = 'perdido'
+                    WHERE estado = 'pendiente' AND date(fecha) < date('now')
+                `;
+                this.db.run(sql, [], function (err) {
+                    if (err) return reject(err);
+                    resolve({ updated: this.changes });
+                });
+            } catch (e) {
+                reject(e);
+            }
         });
     }
 

@@ -1,77 +1,95 @@
 // database.js
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
+const fs = require("fs");
 
 class NFCDatabase {
-    constructor(dbPath = path.join(__dirname, 'biblioteca_nfc.db')) {
+    constructor(dbPath = path.join(__dirname, "biblioteca_nfc.db")) {
         this.dbPath = dbPath;
         this.db = null;
         this.init();
     }
 
-    // ================================
-    // 📦 Inicialización
-    // ================================
-    async init() {
-        try {
-            this.db = new sqlite3.Database(this.dbPath, (err) => {
-                if (err) {
-                    console.error('❌ Error al conectar con la base de datos:', err.message);
-                } else {
-                    console.log('✅ Conectado a la base de datos SQLite');
-                    this.createTables();
-                }
-            });
-        } catch (error) {
-            console.error('⚠️ Error en init():', error);
-        }
+async init() {
+    try {
+        this.db = new sqlite3.Database(this.dbPath, (err) => {
+            if (err) {
+                console.error("Error al conectar con la base de datos:", err.message);
+            } else {
+                console.log("Conectado a la base de datos SQLite");
+                this.createTables()
+                    .then(() => {
+                        console.log("Tablas creadas o verificadas correctamente");
+                    })
+                    .catch((err) => {
+                        console.error("Error creando tablas:", err);
+                    });
+            }
+        });
+    } catch (error) {
+        console.error("Error en init():", error);
     }
+}
 
-    // ================================
-    // 🧱 Creación de tablas
-    // ================================
+
     createTables() {
         return new Promise((resolve, reject) => {
+            const operadorSql = `
+                CREATE TABLE IF NOT EXISTS operador (
+                    id_operador INTEGER PRIMARY KEY,
+                    nombre_completo TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    telefono TEXT NOT NULL,
+                    domicilio TEXT NOT NULL,
+                    codigo_postal TEXT NOT NULL,
+                    ciudad TEXT NOT NULL,
+                    provincia TEXT NOT NULL,
+                    sexo TEXT NOT NULL CHECK(sexo IN ('Femenino', 'Masculino', 'No binario')),
+                    fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+
             const usuarioSql = `
                 CREATE TABLE IF NOT EXISTS usuario (
-                    id_usuario TEXT PRIMARY KEY,
+                    id_usuario INTEGER PRIMARY KEY,
                     tipo_usuario TEXT NOT NULL CHECK(tipo_usuario IN (
                         'Aspirante', 'Cursante', 'No cursante', 
                         'Docente', 'No docente', 'Egresado', 'Externo'
                     )),
                     nombre_completo TEXT NOT NULL,
-                    email TEXT,
-                    telefono TEXT,
-                    domicilio TEXT,
-                    codigo_postal TEXT,
-                    ciudad TEXT,
-                    provincia TEXT,
-                    sexo TEXT,
+                    email TEXT NOT NULL,
+                    telefono TEXT NOT NULL,
+                    domicilio TEXT NOT NULL,
+                    codigo_postal TEXT NOT NULL,
+                    ciudad TEXT NOT NULL,
+                    provincia TEXT NOT NULL,
+                    sexo TEXT NOT NULL CHECK(sexo IN ('Femenino', 'Masculino', 'No binario')),
                     fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    operador TEXT,
-                    uid_tarjeta TEXT UNIQUE, -- Puede ser NULL
-                    contrasena TEXT,          -- Nuevo campo
-                    legajo TEXT,
+                    operador INTEGER NOT NULL,
+                    uid_tarjeta TEXT UNIQUE,
+                    contrasena TEXT NOT NULL,
+                    legajo INTEGER UNIQUE,
                     carreras TEXT,
-                    materias TEXT
-                )
+                    materias TEXT,
+                    FOREIGN KEY (operador) REFERENCES operador(id_operador)
+                );
             `;
 
             const libroSql = `
                 CREATE TABLE IF NOT EXISTS libro (
-                    id_libro TEXT PRIMARY KEY,
+                    id_libro INTEGER PRIMARY KEY AUTOINCREMENT,
                     titulo TEXT NOT NULL,
                     sub_titulo TEXT,
-                    signatura TEXT,
-                    autor TEXT,
+                    asignatura TEXT NOT NULL,
+                    autor TEXT NOT NULL,
                     segundo_autor TEXT,
                     tercer_autor TEXT,
-                    isbn TEXT,
+                    isbn TEXT UNIQUE,
                     serie TEXT,
                     editorial TEXT,
                     edicion TEXT,
                     lugar TEXT,
-                    anio INTEGER,
+                    anio INTEGER CHECK(anio > 0),
                     cant_paginas INTEGER,
                     tamano TEXT,
                     idioma TEXT,
@@ -81,73 +99,87 @@ class NFCDatabase {
                     nivel TEXT,
                     dias_de_prestamo INTEGER DEFAULT 7,
                     palabra_clave TEXT,
-                    observaciones TEXT
-                )
+                    observaciones TEXT,
+                    estado TEXT NOT NULL CHECK(estado IN ('en_prestamo', 'reservado', 'libre')),
+                    uid_tarjeta TEXT UNIQUE
+                );
             `;
 
             const prestamoLibroSql = `
                 CREATE TABLE IF NOT EXISTS prestamo_libro (
                     id_prestamo INTEGER PRIMARY KEY AUTOINCREMENT,
-                    fecha_inicial DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    fecha_final DATETIME,
-                    operador TEXT,
-                    estado TEXT NOT NULL CHECK(estado IN ('en_prestamo', 'reservado', 'libre')),
-                    id_usuario TEXT NOT NULL,
-                    id_libro TEXT NOT NULL,
+                    fecha_inicial DATETIME NOT NULL,
+                    fecha_final DATETIME NOT NULL,
+                    operador INTEGER NOT NULL,
+                    id_usuario INTEGER NOT NULL,
+                    id_libro INTEGER NOT NULL,
+                    estado TEXT NOT NULL CHECK(estado IN ('en_proceso', 'finalizado')),
+                    FOREIGN KEY (operador) REFERENCES operador(id_operador),
                     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
                     FOREIGN KEY (id_libro) REFERENCES libro(id_libro)
-                )
+                );
             `;
 
             const entradaSql = `
                 CREATE TABLE IF NOT EXISTS entrada (
                     id_entrada INTEGER PRIMARY KEY AUTOINCREMENT,
-                    fecha TEXT NOT NULL,
+                    accion TEXT CHECK(accion IN ('entrada', 'salida')),
+                    fecha DATETIME NOT NULL,
                     hora TEXT NOT NULL,
                     tipo_uso TEXT,
                     observacion TEXT,
-                    id_usuario TEXT NOT NULL,
-                    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
-                )
+                    id_usuario INTEGER,
+                    id_libro INTEGER,
+                    id_computadora INTEGER,
+                    uid_tarjeta TEXT,
+                    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
+                    FOREIGN KEY (id_libro) REFERENCES libro(id_libro),
+                    FOREIGN KEY (id_computadora) REFERENCES computadora(id_computadora)
+                );
             `;
 
             const turnoSql = `
                 CREATE TABLE IF NOT EXISTS turno (
                     id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
-                    fecha TEXT NOT NULL,
+                    fecha DATETIME NOT NULL,
                     hora TEXT NOT NULL,
                     tipo_uso TEXT,
-                    id_usuario TEXT NOT NULL,
+                    estado TEXT NOT NULL CHECK(estado IN ('pendiente', 'ya_llego', 'perdido')) DEFAULT 'pendiente',
+                    id_usuario INTEGER NOT NULL,
                     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
-                )
+                );
             `;
 
             const computadoraSql = `
                 CREATE TABLE IF NOT EXISTS computadora (
-                    id_computadora TEXT PRIMARY KEY,
-                    marca TEXT,
-                    modelo TEXT,
+                    id_computadora INTEGER PRIMARY KEY AUTOINCREMENT,
+                    marca TEXT NOT NULL,
+                    modelo TEXT NOT NULL,
                     estado TEXT CHECK(estado IN ('disponible', 'en_uso', 'mantenimiento')) DEFAULT 'disponible',
-                    sistema_operativo TEXT,
-                    observacion TEXT
-                )
+                    sistema_operativo TEXT NOT NULL,
+                    observacion TEXT,
+                    uid_tarjeta TEXT UNIQUE
+                );
             `;
 
             const prestamoComputadoraSql = `
                 CREATE TABLE IF NOT EXISTS prestamo_computadora (
                     id_prestamo_compu INTEGER PRIMARY KEY AUTOINCREMENT,
-                    id_usuario TEXT NOT NULL,
-                    fecha TEXT NOT NULL,
+                    id_usuario INTEGER NOT NULL,
+                    fecha DATETIME NOT NULL,
                     hora_inicio TEXT NOT NULL,
                     hora_fin TEXT,
-                    operador TEXT,
-                    id_computadora TEXT NOT NULL,
+                    operador INTEGER NOT NULL,
+                    id_computadora INTEGER NOT NULL,
+                    estado TEXT NOT NULL CHECK(estado IN ('en_proceso', 'finalizado')),
+                    FOREIGN KEY (operador) REFERENCES operador(id_operador),
                     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
                     FOREIGN KEY (id_computadora) REFERENCES computadora(id_computadora)
-                )
+                );
             `;
 
             this.db.serialize(() => {
+                this.db.run(operadorSql);
                 this.db.run(usuarioSql);
                 this.db.run(libroSql);
                 this.db.run(prestamoLibroSql);
@@ -157,7 +189,7 @@ class NFCDatabase {
                 this.db.run(prestamoComputadoraSql, (err) => {
                     if (err) reject(err);
                     else {
-                        console.log('📘 Tablas creadas o ya existentes');
+                        console.log("Tablas creadas con estructura nueva");
                         resolve();
                     }
                 });
@@ -165,9 +197,6 @@ class NFCDatabase {
         });
     }
 
-    // ================================
-    // 👤 USUARIOS
-    // ================================
     registrarUsuario(data) {
         return new Promise((resolve, reject) => {
             const {
@@ -177,7 +206,7 @@ class NFCDatabase {
             } = data;
 
             if (!id_usuario || !tipo_usuario || !nombre_completo) {
-                reject(new Error('Faltan campos obligatorios'));
+                reject(new Error("Faltan campos obligatorios"));
                 return;
             }
 
@@ -192,8 +221,8 @@ class NFCDatabase {
 
             this.db.run(sql, [
                 id_usuario, tipo_usuario, nombre_completo, email, telefono,
-                domicilio, codigo_postal, ciudad, provincia, sexo, operador, uid_tarjeta || null,
-                contrasena || null, legajo || null,
+                domicilio, codigo_postal, ciudad, provincia, sexo,
+                operador, uid_tarjeta || null, contrasena || null, legajo || null,
                 carreras ? JSON.stringify(carreras) : null,
                 materias ? JSON.stringify(materias) : null
             ], function (err) {
@@ -205,6 +234,22 @@ class NFCDatabase {
             });
         });
     }
+
+    actualizarUsuario(id_usuario, data) {
+        return new Promise((resolve, reject) => {
+          const fields = Object.keys(data).map(k => `${k} = ?`).join(', ');
+          const values = Object.values(data);
+          values.push(id_usuario);
+      
+          const sql = `UPDATE usuario SET ${fields} WHERE id_usuario = ?`;
+          this.db.run(sql, values, function(err) {
+            if (err) reject(err);
+            else resolve({ updatedRows: this.changes });
+          });
+        });
+      }
+
+      
 
     obtenerUsuarios() {
         return new Promise((resolve, reject) => {
@@ -225,43 +270,87 @@ class NFCDatabase {
 
     obtenerUsuarioPorUID(uid_tarjeta) {
         return new Promise((resolve, reject) => {
-            this.db.get('SELECT * FROM usuario WHERE uid_tarjeta = ?', [uid_tarjeta], (err, row) => {
+            this.db.get(`SELECT id_usuario FROM usuario WHERE uid_tarjeta = ?`, [uid_tarjeta], (err, row) => {
                 if (err) reject(err);
-                else if (row) {
-                    row.carreras = row.carreras ? JSON.parse(row.carreras) : [];
-                    row.materias = row.materias ? JSON.parse(row.materias) : [];
-                    resolve(row);
-                } else resolve(null);
+                else {
+                    if (row) {
+                        row.carreras = row.carreras ? JSON.parse(row.carreras) : [];
+                        row.materias = row.materias ? JSON.parse(row.materias) : [];
+                    }
+                    resolve(row || null);
+                }
             });
         });
     }
 
     obtenerUsuarioPorDNI(id_usuario) {
         return new Promise((resolve, reject) => {
-            this.db.get('SELECT * FROM usuario WHERE id_usuario = ?', [id_usuario], (err, row) => {
+            this.db.get(`SELECT * FROM usuario WHERE id_usuario = ?`, [id_usuario], (err, row) => {
                 if (err) reject(err);
-                else if (row) {
-                    row.carreras = row.carreras ? JSON.parse(row.carreras) : [];
-                    row.materias = row.materias ? JSON.parse(row.materias) : [];
-                    resolve(row);
-                } else resolve(null);
+                else {
+                    if (row) {
+                        row.carreras = row.carreras ? JSON.parse(row.carreras) : [];
+                        row.materias = row.materias ? JSON.parse(row.materias) : [];
+                    }
+                    resolve(row || null);
+                }
             });
         });
     }
+
+    recuperarLogin(id_usuario, contrasena) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT id_usuario, nombre_completo, tipo_usuario, contrasena
+                FROM usuario
+                WHERE id_usuario = ? AND contrasena = ?
+            `;
+            this.db.get(sql, [id_usuario, contrasena], (err, row) => {
+                if (err) reject(err);
+                else resolve(row || null);
+            });
+        });
+    }
+    
 
     eliminarUsuario(id_usuario) {
         return new Promise((resolve, reject) => {
-            const sql = 'DELETE FROM usuario WHERE id_usuario = ?';
-            this.db.run(sql, [id_usuario], function (err) {
+            this.db.run(`DELETE FROM usuario WHERE id_usuario = ?`, [id_usuario], function (err) {
                 if (err) reject(err);
-                else resolve({ deletedRows: this.changes });
+                else resolve({ deleted: this.changes });
             });
         });
     }
 
-    // ================================
-    // 📅 TURNOS
-    // ================================
+    obtenerUsuariosActivos() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT u.*
+                FROM usuario u
+                JOIN (
+                    SELECT id_usuario, MAX(id_entrada) AS ultima_entrada
+                    FROM entrada
+                    GROUP BY id_usuario
+                ) emax ON u.id_usuario = emax.id_usuario
+                JOIN entrada e ON e.id_entrada = emax.ultima_entrada
+                WHERE e.accion = 'entrada'
+                ORDER BY u.nombre_completo
+            `;
+            this.db.all(sql, [], (err, rows) => {
+                if (err) reject(err);
+                else {
+                    const parsed = rows.map(u => ({
+                        ...u,
+                        carreras: u.carreras ? JSON.parse(u.carreras) : [],
+                        materias: u.materias ? JSON.parse(u.materias) : []
+                    }));
+                    resolve(parsed);
+                }
+            });
+        });
+    }
+    
+
     registrarTurno({ fecha, hora, tipo_uso, id_usuario }) {
         return new Promise((resolve, reject) => {
             const sql = `
@@ -290,24 +379,33 @@ class NFCDatabase {
         });
     }
 
-    // ================================
-    // 💻 COMPUTADORAS
-    // ================================
-    registrarComputadora({ id_computadora, marca, modelo, estado, sistema_operativo, observacion }) {
+    actualizarTurnosPendientes() {
         return new Promise((resolve, reject) => {
             const sql = `
-                INSERT INTO computadora (id_computadora, marca, modelo, estado, sistema_operativo, observacion)
-                VALUES (?, ?, ?, ?, ?, ?)
+                UPDATE turno
+                SET estado = 'perdido'
+                WHERE estado = 'pendiente' AND fecha < DATE('now')
             `;
-            this.db.run(sql, [id_computadora, marca, modelo, estado, sistema_operativo, observacion], function (err) {
+            this.db.run(sql, [], function (err) {
                 if (err) reject(err);
-                else {
-                    console.log(`💻 Computadora registrada: ${marca} ${modelo}`);
-                    resolve({ id_computadora });
-                }
+                else resolve({ updated: this.changes });
             });
         });
     }
+
+    registrarComputadora({ marca, modelo, estado, sistema_operativo, observacion, uid_tarjeta }) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                INSERT INTO computadora (marca, modelo, estado, sistema_operativo, observacion, uid_tarjeta)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `;
+            this.db.run(sql, [marca, modelo, estado, sistema_operativo, observacion, uid_tarjeta || null], function (err) {
+                if (err) reject(err);
+                else resolve({ id_computadora: this.lastID });
+            });
+        });
+    }
+    
 
     obtenerComputadoras() {
         return new Promise((resolve, reject) => {
@@ -319,55 +417,106 @@ class NFCDatabase {
         });
     }
 
-    actualizarEstadoComputadora(id_computadora, nuevoEstado) {
+    obtenerComputadoraPorUID(uid_tarjeta) {
         return new Promise((resolve, reject) => {
-            const sql = `
-                UPDATE computadora
-                SET estado = ?
-                WHERE id_computadora = ?
-            `;
-            this.db.run(sql, [nuevoEstado, id_computadora], function (err) {
+            this.db.get(`SELECT id_computadora FROM computadora WHERE uid_tarjeta = ?`, [uid_tarjeta], (err, row) => {
                 if (err) reject(err);
-                else resolve({ updated: this.changes });
+                else resolve(row || null);
             });
         });
     }
 
-    // ================================
-    // 💻 PRÉSTAMOS DE COMPUTADORAS
-    // ================================
     registrarPrestamoComputadora({ id_usuario, fecha, hora_inicio, operador, id_computadora }) {
         return new Promise((resolve, reject) => {
-            const sql = `
-                INSERT INTO prestamo_computadora (id_usuario, fecha, hora_inicio, operador, id_computadora)
-                VALUES (?, ?, ?, ?, ?)
-            `;
-            this.db.run(sql, [id_usuario, fecha, hora_inicio, operador, id_computadora], function (err) {
-                if (err) reject(err);
-                else {
-                    console.log(`🖥️ Préstamo iniciado: Usuario ${id_usuario} → Computadora ${id_computadora}`);
-                    resolve({ id_prestamo_compu: this.lastID });
-                }
+            const db = this.db;
+    
+            db.serialize(() => {
+                // 1️⃣ Verificar que la computadora no esté en uso
+                db.get(
+                    `SELECT estado FROM computadora WHERE id_computadora = ?`,
+                    [id_computadora],
+                    (err, row) => {
+                        if (err) return reject(err);
+    
+                        if (!row) {
+                            return reject(new Error("La computadora no existe."));
+                        }
+    
+                        if (row.estado === "en uso") {
+                            return reject(new Error("La computadora ya está en uso."));
+                        }
+    
+                        // 2️⃣ Registrar el préstamo
+                        const sqlInsert = `
+                            INSERT INTO prestamo_computadora 
+                            (id_usuario, fecha, hora_inicio, operador, id_computadora, estado)
+                            VALUES (?, ?, ?, ?, ?, 'en_proceso')
+                        `;
+                        db.run(
+                            sqlInsert,
+                            [id_usuario, fecha, hora_inicio, operador, id_computadora],
+                            function (err2) {
+                                if (err2) return reject(err2);
+    
+                                const id_prestamo_compu = this.lastID;
+    
+                                // 3️⃣ Cambiar el estado de la computadora a "en uso"
+                                db.run(
+                                    `UPDATE computadora SET estado = 'en uso' WHERE id_computadora = ?`,
+                                    [id_computadora],
+                                    function (err3) {
+                                        if (err3) return reject(err3);
+                                        resolve({ id_prestamo_compu });
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
             });
         });
     }
-
+    
+    
     finalizarPrestamoComputadora(id_prestamo_compu, hora_fin) {
         return new Promise((resolve, reject) => {
-            const sql = `
-                UPDATE prestamo_computadora
-                SET hora_fin = ?
-                WHERE id_prestamo_compu = ?
-            `;
-            this.db.run(sql, [hora_fin, id_prestamo_compu], function (err) {
-                if (err) reject(err);
-                else {
-                    console.log(`✅ Préstamo de computadora ${id_prestamo_compu} finalizado`);
-                    resolve({ updated: this.changes });
-                }
+            const db = this.db;
+            db.serialize(() => {
+                // 1️⃣ Marcar el préstamo como finalizado
+                db.run(
+                    `
+                    UPDATE prestamo_computadora
+                    SET hora_fin = ?, estado = 'finalizado'
+                    WHERE id_prestamo_compu = ?
+                    `,
+                    [hora_fin, id_prestamo_compu],
+                    function (err) {
+                        if (err) return reject(err);
+    
+                        // 2️⃣ Liberar la computadora asociada
+                        db.run(
+                            `
+                            UPDATE computadora
+                            SET estado = 'disponible'
+                            WHERE id_computadora = (
+                                SELECT id_computadora 
+                                FROM prestamo_computadora 
+                                WHERE id_prestamo_compu = ?
+                            )
+                            `,
+                            [id_prestamo_compu],
+                            function (err2) {
+                                if (err2) return reject(err2);
+                                resolve({ updated: this.changes });
+                            }
+                        );
+                    }
+                );
             });
         });
     }
+    
+    
 
     obtenerPrestamosComputadora() {
         return new Promise((resolve, reject) => {
@@ -385,16 +534,392 @@ class NFCDatabase {
         });
     }
 
-    // ================================
-    // 🔒 Cierre
-    // ================================
+    // ------------------ COMPUTADORAS ------------------
+    eliminarComputadora(id_computadora) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`DELETE FROM computadora WHERE id_computadora = ?`, [id_computadora], function (err) {
+                if (err) reject(err);
+                else resolve({ deleted: this.changes });
+            });
+        });
+    }
+
+    // ------------------ PRÉSTAMOS COMPUTADORA ------------------
+    eliminarPrestamoComputadora(id_prestamo_compu) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`DELETE FROM prestamo_computadora WHERE id_prestamo_compu = ?`, [id_prestamo_compu], function (err) {
+                if (err) reject(err);
+                else resolve({ deleted: this.changes });
+            });
+        });
+    }
+
+    actualizarEstadoPrestamoComputadora(id_prestamo_compu, nuevoEstado, hora_fin = null) {
+        return new Promise((resolve, reject) => {
+            const parts = [];
+            const params = [];
+            parts.push(`estado = ?`);
+            params.push(nuevoEstado);
+            if (hora_fin !== null) {
+                parts.push(`hora_fin = ?`);
+                params.push(hora_fin);
+            }
+            params.push(id_prestamo_compu);
+
+            const sql = `UPDATE prestamo_computadora SET ${parts.join(', ')} WHERE id_prestamo_compu = ?`;
+            this.db.run(sql, params, function (err) {
+                if (err) reject(err);
+                else resolve({ updated: this.changes });
+            });
+        });
+    }
+
+
+    registrarOperador(data) {
+        return new Promise((resolve, reject) => {
+            const {
+                id_operador, nombre_completo, email, telefono,
+                domicilio, codigo_postal, ciudad, provincia, sexo
+            } = data;
+
+            const sql = `
+                INSERT INTO operador (id_operador, nombre_completo, email, telefono,
+                    domicilio, codigo_postal, ciudad, provincia, sexo)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            this.db.run(sql, [id_operador, nombre_completo, email, telefono, domicilio,
+                codigo_postal, ciudad, provincia, sexo], function (err) {
+                if (err) reject(err);
+                else resolve({ id_operador });
+            });
+        });
+    }
+
+    obtenerOperadores() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT * FROM operador ORDER BY nombre_completo`, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    eliminarOperador(id_operador) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`DELETE FROM operador WHERE id_operador = ?`, [id_operador], function (err) {
+                if (err) reject(err);
+                else resolve({ deleted: this.changes });
+            });
+        });
+    }
+
+    registrarPrestamoLibro({ id_libro, fecha_inicial, dias_prestamo, operador, id_usuario }) {
+        return new Promise((resolve, reject) => {
+            if (!id_libro || !fecha_inicial || !dias_prestamo || !operador || !id_usuario) {
+                reject(new Error("Faltan campos obligatorios para registrar préstamo"));
+                return;
+            }
+    
+            const db = this.db;
+    
+            // 1️⃣ Verificar si el libro está disponible
+            const sqlVerificarLibro = `SELECT estado FROM libro WHERE id_libro = ?`;
+    
+            db.get(sqlVerificarLibro, [id_libro], (err, row) => {
+                if (err) return reject(err);
+                if (!row) return reject(new Error("El libro no existe en la base de datos"));
+    
+                if (row.estado === "en_prestamo") {
+                    return reject(new Error("El libro ya está prestado y no puede ser prestado nuevamente."));
+                }
+    
+                // 2️⃣ Calcular fecha final (SQLite usa formato YYYY-MM-DD)
+                const fechaFinalSQL = `DATE('${fecha_inicial}', '+${dias_prestamo} day')`;
+    
+                // 3️⃣ Registrar el préstamo
+                const sqlPrestamo = `
+                    INSERT INTO prestamo_libro (fecha_inicial, fecha_final, operador, id_usuario, id_libro, estado)
+                    VALUES (?, ${fechaFinalSQL}, ?, ?, ?, 'en_proceso')
+                `;
+    
+                db.run(sqlPrestamo, [fecha_inicial, operador, id_usuario, id_libro], function (err2) {
+                    if (err2) return reject(err2);
+    
+                    const idPrestamo = this.lastID;
+    
+                    // 4️⃣ Actualizar estado del libro a "en_prestamo"
+                    const sqlUpdateLibro = `UPDATE libro SET estado = 'en_prestamo' WHERE id_libro = ?`;
+    
+                    db.run(sqlUpdateLibro, [id_libro], function (err3) {
+                        if (err3) reject(err3);
+                        else resolve({ id_prestamo: idPrestamo });
+                    });
+                });
+            });
+        });
+    }
+        
+    obtenerPrestamosLibros() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT 
+                    p.id_prestamo,
+                    l.titulo,
+                    u.nombre_completo AS usuario,
+                    u.tipo_usuario,
+                    p.fecha_inicial,
+                    p.fecha_final,
+                    ROUND(julianday(p.fecha_final) - julianday('now')) AS dias_restantes
+                FROM prestamo_libro p
+                JOIN libro l ON p.id_libro = l.id_libro
+                JOIN usuario u ON p.id_usuario = u.id_usuario
+                WHERE p.estado = 'en_proceso'
+                ORDER BY dias_restantes ASC
+            `;
+    
+            this.db.all(sql, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    buscarLibros(query) {
+        return new Promise((resolve, reject) => {
+            if (!query || query.trim() === "") {
+                resolve([]);
+                return;
+            }
+    
+            const sql = `
+                SELECT id_libro, titulo, sub_titulo, asignatura, autor, estado
+                FROM libro
+                WHERE titulo LIKE ? 
+                   OR sub_titulo LIKE ?
+                   OR asignatura LIKE ?
+                   OR autor LIKE ?
+            `;
+    
+            const params = Array(4).fill(`%${query}%`);
+    
+            this.db.all(sql, params, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    obtenerLibroPorUID(uid_tarjeta) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`SELECT * FROM libro WHERE uid_tarjeta = ?`, [uid_tarjeta], (err, row) => {
+                if (err) reject(err);
+                else resolve(row || null);
+            });
+        });
+    }
+
+    finalizarPrestamoLibro(id_prestamo) {
+        return new Promise((resolve, reject) => {
+            const db = this.db; // 🔹 Guardamos la referencia
+    
+            // Primero obtener el id_libro asociado al préstamo
+            const sqlSelect = `SELECT id_libro FROM prestamo_libro WHERE id_prestamo = ?`;
+    
+            db.get(sqlSelect, [id_prestamo], (err, row) => {
+                if (err) return reject(err);
+                if (!row) return reject(new Error("No se encontró el préstamo"));
+    
+                const id_libro = row.id_libro;
+    
+                // Actualizar el estado del préstamo
+                const sqlUpdatePrestamo = `
+                    UPDATE prestamo_libro
+                    SET estado = 'finalizado'
+                    WHERE id_prestamo = ?
+                `;
+    
+                db.run(sqlUpdatePrestamo, [id_prestamo], (err2) => {
+                    if (err2) return reject(err2);
+    
+                    // Luego actualizar el libro a 'libre'
+                    const sqlUpdateLibro = `UPDATE libro SET estado = 'libre' WHERE id_libro = ?`;
+    
+                    db.run(sqlUpdateLibro, [id_libro], function (err3) {
+                        if (err3) reject(err3);
+                        else resolve({ updated: this.changes });
+                    });
+                });
+            });
+        });
+    }
+    
+    
+    
+    registrarLibro(data) {
+        return new Promise((resolve, reject) => {
+            const {
+                titulo, sub_titulo, asignatura, autor, segundo_autor, tercer_autor,
+                isbn, serie, editorial, edicion, lugar, anio, cant_paginas, tamano,
+                idioma, origen, ubicacion, nivel, dias_de_prestamo, palabra_clave,
+                observaciones, estado, uid_tarjeta
+            } = data;
+
+            if (!titulo || !asignatura || !autor) {
+                return reject(new Error("Faltan campos obligatorios para registrar libro"));
+            }
+
+            const sql = `
+                INSERT INTO libro (
+                    titulo, sub_titulo, asignatura, autor, segundo_autor, tercer_autor,
+                    isbn, serie, editorial, edicion, lugar, anio, cant_paginas, tamano,
+                    idioma, origen, ubicacion, nivel, dias_de_prestamo, palabra_clave,
+                    observaciones, estado, uid_tarjeta
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(sql, [
+                titulo, sub_titulo || null, asignatura, autor, segundo_autor || null, tercer_autor || null,
+                isbn || null, serie || null, editorial || null, edicion || null, lugar || null,
+                anio || null, cant_paginas || null, tamano || null, idioma || null, origen || null,
+                ubicacion || null, nivel || null, dias_de_prestamo || 7, palabra_clave || null,
+                observaciones || null, estado || 'libre' || null, uid_tarjeta || null
+            ], function (err) {
+                if (err) reject(err);
+                else resolve({ id_libro: this.lastID });
+            });
+        });
+    }
+
+    obtenerLibros() {
+        return new Promise((resolve, reject) => {
+            const sql = `SELECT * FROM libro ORDER BY titulo`;
+            this.db.all(sql, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
+    eliminarLibro(id_libro) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`DELETE FROM libro WHERE id_libro = ?`, [id_libro], function (err) {
+                if (err) reject(err);
+                else resolve({ deleted: this.changes });
+            });
+        });
+    }
+
+    registrarLecturaNFC(uid_tarjeta) {
+        return new Promise(async (resolve, reject) => {
+            if (!uid_tarjeta) return reject(new Error('Falta UID'));
+    
+            const fecha = new Date().toISOString().split('T')[0];
+            const hora = new Date().toISOString().split('T')[1].split('.')[0];
+    
+            try {
+                // Buscar asociaciones
+                const usuario = await this.obtenerUsuarioPorUID(uid_tarjeta);
+                const libro = await this.obtenerLibroPorUID(uid_tarjeta);
+                const computadora = await this.obtenerComputadoraPorUID(uid_tarjeta);
+    
+                let accion = null;
+                let tipo_uso = null;
+                let id_usuario = null;
+                let id_libro = null;
+                let id_computadora = null;
+    
+                // Determinar acción y tipo_uso
+                if (usuario) {
+                    id_usuario = usuario.id_usuario;
+    
+                    // Buscar última entrada del usuario
+                    const ultima = await new Promise((res, rej) => {
+                        this.db.get(
+                            `SELECT accion FROM entrada WHERE id_usuario = ? ORDER BY id_entrada DESC LIMIT 1`,
+                            [id_usuario],
+                            (err, row) => { if(err) rej(err); else res(row ? row.accion : null); }
+                        );
+                    });
+    
+                    accion = (ultima === 'entrada') ? 'salida' : 'entrada';
+                    tipo_uso = 'sala';
+    
+                } else if (libro) {
+                    id_libro = libro.id_libro;
+    
+                    const ultima = await new Promise((res, rej) => {
+                        this.db.get(
+                            `SELECT accion FROM entrada WHERE id_libro = ? ORDER BY id_entrada DESC LIMIT 1`,
+                            [id_libro],
+                            (err, row) => { if(err) rej(err); else res(row ? row.accion : null); }
+                        );
+                    });
+    
+                    tipo_uso = 'libro';
+    
+                } else if (computadora) {
+                    id_computadora = computadora.id_computadora;
+    
+                    const ultima = await new Promise((res, rej) => {
+                        this.db.get(
+                            `SELECT accion FROM entrada WHERE id_computadora = ? ORDER BY id_entrada DESC LIMIT 1`,
+                            [id_computadora],
+                            (err, row) => { if(err) rej(err); else res(row ? row.accion : null); }
+                        );
+                    });
+                    tipo_uso = 'computadora';
+                }
+    
+                // Insertar registro
+                const sql = `
+                    INSERT INTO entrada (accion, fecha, hora, tipo_uso, observacion, id_usuario, id_libro, id_computadora, uid_tarjeta)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+    
+                this.db.run(sql, [
+                    accion, fecha, hora, tipo_uso, null, id_usuario, id_libro, id_computadora, uid_tarjeta
+                ], function(err) {
+                    if(err) return reject(err);
+    
+                    resolve({
+                        id_entrada: this.lastID,
+                        accion,
+                        tipo_uso,
+                        id_usuario,
+                        id_libro,
+                        id_computadora,
+                        fecha,
+                        hora,
+                        uid_tarjeta
+                    });
+                });
+    
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    // Obtener el último UID de la tabla 'entrad'
+getUltimoUID = () => {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        "SELECT uid_tarjeta FROM entrada ORDER BY id_entrada DESC LIMIT 1",
+        (err, row) => {
+          if (err) return reject(err);
+          resolve(row || null);
+        }
+      );
+    });
+  };
+  
     close() {
         return new Promise((resolve, reject) => {
             if (this.db) {
                 this.db.close((err) => {
                     if (err) reject(err);
                     else {
-                        console.log('🔒 Conexión cerrada');
+                        console.log("Conexión cerrada");
                         resolve();
                     }
                 });

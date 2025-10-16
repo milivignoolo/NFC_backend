@@ -283,9 +283,14 @@ async init() {
         });
     }
 
-    obtenerUsuarioPorDNI(id_usuario) {
+    obtenerUsuarioPorUID(uid_tarjeta) {
         return new Promise((resolve, reject) => {
-            this.db.get(`SELECT * FROM usuario WHERE id_usuario = ?`, [id_usuario], (err, row) => {
+            const sql = `
+                SELECT id_usuario, tipo_usuario, nombre_completo, email, telefono, legajo, carreras, materias
+                FROM usuario
+                WHERE uid_tarjeta = ?
+            `;
+            this.db.get(sql, [uid_tarjeta], (err, row) => {
                 if (err) reject(err);
                 else {
                     if (row) {
@@ -297,6 +302,7 @@ async init() {
             });
         });
     }
+    
 
     recuperarLogin(id_usuario, contrasena) {
         return new Promise((resolve, reject) => {
@@ -419,63 +425,58 @@ async init() {
 
     obtenerComputadoraPorUID(uid_tarjeta) {
         return new Promise((resolve, reject) => {
-            this.db.get(`SELECT id_computadora FROM computadora WHERE uid_tarjeta = ?`, [uid_tarjeta], (err, row) => {
+            const sql = `
+                SELECT id_computadora, marca, modelo, estado, sistema_operativo
+                FROM computadora
+                WHERE uid_tarjeta = ?
+            `;
+            this.db.get(sql, [uid_tarjeta], (err, row) => {
                 if (err) reject(err);
                 else resolve(row || null);
             });
         });
     }
+    
 
     registrarPrestamoComputadora({ id_usuario, fecha, hora_inicio, operador, id_computadora }) {
         return new Promise((resolve, reject) => {
-            const db = this.db;
-    
-            db.serialize(() => {
-                // 1️⃣ Verificar que la computadora no esté en uso
-                db.get(
-                    `SELECT estado FROM computadora WHERE id_computadora = ?`,
-                    [id_computadora],
-                    (err, row) => {
-                        if (err) return reject(err);
-    
-                        if (!row) {
-                            return reject(new Error("La computadora no existe."));
-                        }
-    
-                        if (row.estado === "en uso") {
-                            return reject(new Error("La computadora ya está en uso."));
-                        }
-    
-                        // 2️⃣ Registrar el préstamo
-                        const sqlInsert = `
-                            INSERT INTO prestamo_computadora 
-                            (id_usuario, fecha, hora_inicio, operador, id_computadora, estado)
-                            VALUES (?, ?, ?, ?, ?, 'en_proceso')
-                        `;
-                        db.run(
-                            sqlInsert,
-                            [id_usuario, fecha, hora_inicio, operador, id_computadora],
-                            function (err2) {
-                                if (err2) return reject(err2);
-    
-                                const id_prestamo_compu = this.lastID;
-    
-                                // 3️⃣ Cambiar el estado de la computadora a "en uso"
-                                db.run(
-                                    `UPDATE computadora SET estado = 'en uso' WHERE id_computadora = ?`,
-                                    [id_computadora],
-                                    function (err3) {
-                                        if (err3) return reject(err3);
-                                        resolve({ id_prestamo_compu });
-                                    }
-                                );
-                            }
-                        );
-                    }
+          const db = this.db;
+      
+          // Verificar que la computadora no esté en uso
+          db.get(
+            `SELECT estado FROM computadora WHERE id_computadora = ?`,
+            [id_computadora],
+            (err, row) => {
+              if (err) return reject(err);
+              if (!row) return reject(new Error("La computadora no existe."));
+              if (row.estado === "en_uso") return reject(new Error("La computadora ya está en uso."));
+      
+              // Registrar el préstamo
+              const sqlInsert = `
+                INSERT INTO prestamo_computadora 
+                (id_usuario, fecha, hora_inicio, operador, id_computadora, estado)
+                VALUES (?, ?, ?, ?, ?, 'en_proceso')
+              `;
+              db.run(sqlInsert, [id_usuario, fecha, hora_inicio, operador, id_computadora], function(err2) {
+                if (err2) return reject(err2);
+      
+                const id_prestamo_compu = this.lastID;
+      
+                // Actualizar el estado de la computadora a "en_uso"
+                db.run(
+                  `UPDATE computadora SET estado = 'en_uso' WHERE id_computadora = ?`,
+                  [id_computadora],
+                  function(err3) {
+                    if (err3) return reject(err3);
+                    resolve({ id_prestamo_compu });
+                  }
                 );
-            });
+              });
+            }
+          );
         });
-    }
+      }
+      
     
     
     finalizarPrestamoComputadora(id_prestamo_compu, hora_fin) {
@@ -711,12 +712,18 @@ async init() {
 
     obtenerLibroPorUID(uid_tarjeta) {
         return new Promise((resolve, reject) => {
-            this.db.get(`SELECT * FROM libro WHERE uid_tarjeta = ?`, [uid_tarjeta], (err, row) => {
+            const sql = `
+                SELECT id_libro, titulo, sub_titulo, autor, segundo_autor, tercer_autor, isbn, edicion, anio, estado
+                FROM libro
+                WHERE uid_tarjeta = ?
+            `;
+            this.db.get(sql, [uid_tarjeta], (err, row) => {
                 if (err) reject(err);
                 else resolve(row || null);
             });
         });
     }
+    
 
     finalizarPrestamoLibro(id_prestamo) {
         return new Promise((resolve, reject) => {

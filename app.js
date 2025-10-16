@@ -355,6 +355,8 @@ app.post('/api/nfc', async (req, res) => {
 
     // Llamamos a la función corregida en la DB
     const nuevaEntrada = await db.registrarLecturaNFC(uid_tarjeta);
+    // 🔔 Enviar el nuevo UID a todos los clientes WebSocket
+    broadcast({ tipo: 'lectura_nfc', data: nuevaEntrada });
 
     res.status(201).json({
       message: 'Lectura registrada correctamente',
@@ -472,11 +474,40 @@ app.put('/api/prestamos-libros/:id/finalizar', async (req, res) => {
 
 
 // ======================================================
-//               INICIO DEL SERVIDOR
+//               INICIO DEL SERVIDOR + WEBSOCKET
 // ======================================================
-app.listen(port, '0.0.0.0', async () => {
-  console.log(`Servidor escuchando en http://0.0.0.0:${port}`);
-  
+const http = require('http');
+const WebSocket = require('ws');
+
+// Crear servidor HTTP a partir de Express
+const server = http.createServer(app);
+
+// Crear servidor WebSocket asociado
+const wss = new WebSocket.Server({ server });
+
+// Evento: cuando un cliente web se conecta
+wss.on('connection', (ws) => {
+  console.log('🌐 Cliente WebSocket conectado');
+
+  ws.send(JSON.stringify({ message: 'Conectado al servidor WebSocket' }));
+
+  ws.on('close', () => console.log('❌ Cliente desconectado'));
+});
+
+// Función para emitir un mensaje a todos los clientes conectados
+function broadcast(data) {
+  const json = JSON.stringify(data);
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(json);
+    }
+  });
+}
+
+// Iniciar servidor en el mismo puerto
+server.listen(port, '0.0.0.0', async () => {
+  console.log(`🚀 Servidor HTTP+WS en http://0.0.0.0:${port}`);
+
   setTimeout(async () => {
     try {
       await db.actualizarTurnosPendientes();
@@ -487,12 +518,9 @@ app.listen(port, '0.0.0.0', async () => {
   }, 2000);
 });
 
-
-
-
+// Cerrar servidor limpiamente
 process.on('SIGINT', async () => {
   console.log('\nCerrando servidor...');
   await db.close();
   process.exit(0);
 });
-

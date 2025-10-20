@@ -40,15 +40,26 @@ async function cargarOperadores() {
             ciudad: "Ciudad Ejemplo 3",
             provincia: "Provincia Ejemplo 3",
             sexo: "No binario"
+        },
+        {
+            id_operador: 99999999,
+            nombre_completo: "Página Web",
+            email: "biblioteca@sanfrancisco.utn.edu.ar",
+            telefono: "03564-435402",
+            domicilio: "Registro Online",
+            codigo_postal: "0000",
+            ciudad: "Sistema",
+            provincia: "Sistema",
+            sexo: "N/A"
         }
     ];
 
     for (const op of operadores) {
         try {
             const result = await db.registrarOperador(op);
-            console.log(`✅ Operador registrado: ${op.nombre_completo} (ID: ${result.id_operador})`);
+            console.log(`Operador registrado: ${op.nombre_completo} (ID: ${result.id_operador})`);
         } catch (error) {
-            console.error(`❌ Error registrando operador ${op.nombre_completo}:`, error.message);
+            console.error(`Error registrando operador ${op.nombre_completo}:`, error.message);
         }
     }
 

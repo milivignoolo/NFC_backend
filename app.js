@@ -6,19 +6,16 @@ const app = express();
 const port = 3000;
 const db = new NFCDatabase();
 
-// -------------------- MIDDLEWARES --------------------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// -------------------- RUTA PRINCIPAL --------------------
+// Ruta principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ======================================================
-//          VERIFICAR UID (USUARIO, LIBRO, COMPUTADORA)
-// ======================================================
+// Verificar UID (usuario, libro, computadora)
 app.get("/api/uid/verificar/:uid", async (req, res) => {
   const { uid } = req.params;
   if (!uid) return res.status(400).json({ error: "UID no proporcionado" });
@@ -43,9 +40,7 @@ app.get("/api/uid/verificar/:uid", async (req, res) => {
   }
 });
 
-// ======================================================
-//                RUTAS DE OPERADORES
-// ======================================================
+// Operadores
 app.get('/api/operadores', async (req, res) => {
   try {
     const operadores = await db.obtenerOperadores();
@@ -77,11 +72,7 @@ app.delete('/api/operadores/:id', async (req, res) => {
   }
 });
 
-// ======================================================
-//                RUTAS DE USUARIOS
-// ======================================================
-
-// ⚠️ IMPORTANTE: Rutas específicas ANTES de rutas con parámetros dinámicos
+// Usuarios
 app.get('/api/usuarios/uid/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
@@ -104,9 +95,6 @@ app.get('/api/usuarios', async (req, res) => {
   }
 });
 
-// ======================================================
-//                LOGIN DE USUARIOS
-// ======================================================
 app.get('/api/usuarios/login', async (req, res) => {
   try {
     const { id_usuario, contrasena } = req.query;
@@ -135,6 +123,10 @@ app.get('/api/usuarios/login', async (req, res) => {
 app.post('/api/usuarios', async (req, res) => {
   try {
     const data = req.body;
+
+    if (!data.operador) {
+      data.operador = 999999;
+    }
 
     if (!data.id_usuario || !data.tipo_usuario || !data.nombre_completo) {
       return res.status(400).json({ error: 'Campos obligatorios faltantes' });
@@ -176,12 +168,18 @@ app.delete('/api/usuarios/:id_usuario', async (req, res) => {
   }
 });
 
-// ======================================================
-//                RUTAS DE TURNOS
-// ======================================================
+// Turnos
 app.get('/api/turnos', async (req, res) => {
   try {
-    const turnos = await db.obtenerTurnos();
+    const { fecha } = req.query;
+    
+    let turnos;
+    if (fecha) {
+      turnos = await db.obtenerTurnosPorFecha(fecha);
+    } else {
+      turnos = await db.obtenerTurnos();
+    }
+    
     res.json(turnos);
   } catch (error) {
     console.error('Error al obtener turnos:', error);
@@ -209,9 +207,7 @@ app.put('/api/turnos/:id/estado', async (req, res) => {
   }
 });
 
-// ======================================================
-//                RUTAS DE COMPUTADORAS
-// ======================================================
+// Computadoras
 app.get('/api/computadoras', async (req, res) => {
   try {
     const computadoras = await db.obtenerComputadoras();
@@ -253,9 +249,7 @@ app.delete('/api/computadoras/:id', async (req, res) => {
   }
 });
 
-// ======================================================
-//            RUTAS DE PRÉSTAMOS DE COMPUTADORA
-// ======================================================
+// Préstamos de computadoras
 app.get('/api/prestamos-computadora', async (req, res) => {
   try {
     const prestamos = await db.obtenerPrestamosComputadora();
@@ -313,9 +307,7 @@ app.delete('/api/prestamos-computadora/:id', async (req, res) => {
   }
 });
 
-// ======================================================
-//                   RUTAS DE ENTRADAS
-// ======================================================
+// Entradas de usuarios activos
 app.get('/api/entradas/activos', async (req, res) => {
   try {
     const activos = await db.obtenerUsuariosActivos();
@@ -338,13 +330,7 @@ app.get("/api/uid/ultimo", async (req, res) => {
   }
 });
 
-
-
-
-
-// ======================================================
-//          REGISTRO DE LECTURA NFC (ENTRADA)
-// ======================================================
+// Registro de lectura NFC (entrada)
 app.post('/api/nfc', async (req, res) => {
   try {
     const { uid_tarjeta } = req.body;
@@ -355,7 +341,7 @@ app.post('/api/nfc', async (req, res) => {
 
     // Llamamos a la función corregida en la DB
     const nuevaEntrada = await db.registrarLecturaNFC(uid_tarjeta);
-    // 🔔 Enviar el nuevo UID a todos los clientes WebSocket
+    // Enviar el nuevo UID a todos los clientes WebSocket
     broadcast({ tipo: 'lectura_nfc', data: nuevaEntrada });
 
     res.status(201).json({
@@ -368,13 +354,7 @@ app.post('/api/nfc', async (req, res) => {
   }
 });
 
-
-
-// ======================================================
-//                   RUTAS DE LIBROS
-// ======================================================
-
-// ⚠️ IMPORTANTE: Rutas específicas ANTES de rutas con parámetros dinámicos
+// Libros
 app.get('/api/libros/buscar', async (req, res) => {
   try {
     const { query } = req.query;
@@ -437,9 +417,7 @@ app.delete('/api/libros/:id_libro', async (req, res) => {
   }
 });
 
-// ======================================================
-//              RUTAS DE PRÉSTAMOS DE LIBROS
-// ======================================================
+// Préstamos de libros
 app.get('/api/prestamos-libros', async (req, res) => {
   try {
     const prestamos = await db.obtenerPrestamosLibros();
@@ -470,12 +448,7 @@ app.put('/api/prestamos-libros/:id/finalizar', async (req, res) => {
   }
 });
 
-
-
-
-// ======================================================
-//               INICIO DEL SERVIDOR + WEBSOCKET
-// ======================================================
+// Inicio del servidor + WebSocket
 const http = require('http');
 const WebSocket = require('ws');
 

@@ -44,7 +44,7 @@ async init() {
                     codigo_postal TEXT NOT NULL,
                     ciudad TEXT NOT NULL,
                     provincia TEXT NOT NULL,
-                    sexo TEXT NOT NULL CHECK(sexo IN ('Femenino', 'Masculino', 'No binario')),
+                    sexo TEXT NOT NULL CHECK(sexo IN ('Femenino', 'Masculino', 'No binario', 'N/A')),
                     fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             `;
@@ -395,6 +395,46 @@ async init() {
             this.db.run(sql, [], function (err) {
                 if (err) reject(err);
                 else resolve({ updated: this.changes });
+            });
+        });
+    }
+
+    actualizarEstadoTurno(id_turno, estado) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                UPDATE turno
+                SET estado = ?
+                WHERE id_turno = ?
+            `;
+            this.db.run(sql, [estado, id_turno], function (err) {
+                if (err) reject(err);
+                else resolve({ updated: this.changes });
+            });
+        });
+    }
+
+    eliminarTurnosPorFecha(fecha) {
+        return new Promise((resolve, reject) => {
+            const sql = `DELETE FROM turno WHERE fecha = ?`;
+            this.db.run(sql, [fecha], function (err) {
+                if (err) reject(err);
+                else resolve({ deleted: this.changes });
+            });
+        });
+    }
+
+    obtenerTurnosPorFecha(fecha) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT t.*, u.nombre_completo
+                FROM turno t
+                LEFT JOIN usuario u ON t.id_usuario = u.id_usuario
+                WHERE t.fecha = ?
+                ORDER BY t.hora ASC
+            `;
+            this.db.all(sql, [fecha], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
             });
         });
     }

@@ -206,7 +206,24 @@ app.put('/api/turnos/:id/estado', async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar estado' });
   }
 });
+// POST login (credenciales en body JSON)
+app.post('/api/usuarios/login', async (req, res) => {
+  try {
+    const { id_usuario, contrasena } = req.body;
+    if (!id_usuario || !contrasena) {
+      return res.status(400).json({ error: 'Faltan credenciales' });
+    }
 
+    const usuario = await db.recuperarLogin(id_usuario, contrasena);
+    if (!usuario) return res.status(401).json({ error: 'Credenciales inválidas' });
+
+    // Devolver el usuario directo, no dentro de { data: ... }
+    return res.json(usuario);
+  } catch (error) {
+    console.error('Error en login:', error);
+    res.status(500).json({ error: 'Error al intentar iniciar sesión' });
+  }
+});
 // Computadoras
 app.get('/api/computadoras', async (req, res) => {
   try {

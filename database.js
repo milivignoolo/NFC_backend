@@ -136,19 +136,22 @@ async init() {
                     FOREIGN KEY (id_libro) REFERENCES libro(id_libro),
                     FOREIGN KEY (id_computadora) REFERENCES computadora(id_computadora)
                 );
-            `;
+            `;      
 
-            const turnoSql = `
-                CREATE TABLE IF NOT EXISTS turno (
-                    id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
-                    fecha DATETIME NOT NULL,
-                    hora TEXT NOT NULL,
-                    tipo_uso TEXT,
-                    estado TEXT NOT NULL CHECK(estado IN ('pendiente', 'ya_llego', 'perdido')) DEFAULT 'pendiente',
-                    id_usuario INTEGER NOT NULL,
-                    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
-                );
-            `;
+            const turnoSqlDrop = `DROP TABLE IF EXISTS turno;`;
+
+    const turnoSql = `
+        CREATE TABLE IF NOT EXISTS turno (
+            id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha DATETIME NOT NULL,
+            hora TEXT NOT NULL,
+            tipo_uso TEXT,
+            estado TEXT NOT NULL CHECK(estado IN ('pendiente', 'ingreso', 'finalizado', 'perdido')) DEFAULT 'pendiente',
+            id_usuario INTEGER NOT NULL,
+            FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
+        );
+    `;
+
 
             const computadoraSql = `
                 CREATE TABLE IF NOT EXISTS computadora (
@@ -384,6 +387,46 @@ async init() {
             });
         });
     }
+
+    // Actualiza turnos automáticamente: ingreso -> finalizado y pendientes antiguos -> perdido
+actualizarTurnosAutomaticamente() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const ahora = new Date();
+
+            // --- Turnos con estado 'ingreso' hace más de 2 horas → 'finalizado'
+            const turnosIngreso = await this.obtenerTurnos();
+            for (const turno of turnosIngreso) {
+                if (turno.estado === 'ingreso') {
+                    const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}`);
+                    if (ahora - fechaHoraTurno >= 2 * 60 * 60 * 1000) {
+                        await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
+                        console.log(`Turno ${turno.id_turno} finalizado automáticamente`);
+                    }
+                }
+            }
+
+            // --- Turnos pendientes de días anteriores → 'perdido'
+            const turnosPendientes = await this.obtenerTurnos();
+            for (const turno of turnosPendientes) {
+                if (turno.estado === 'pendiente') {
+                    const fechaTurno = new Date(turno.fecha);
+                    const hoy = new Date();
+                    hoy.setHours(0,0,0,0);
+                    if (fechaTurno < hoy) {
+                        await this.actualizarEstadoTurno(turno.id_turno, 'perdido');
+                        console.log(`Turno ${turno.id_turno} marcado como perdido`);
+                    }
+                }
+            }
+
+            resolve(true);
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
 
     actualizarTurnosPendientes() {
         return new Promise((resolve, reject) => {

@@ -10,6 +10,26 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- Al iniciar el servidor, actualizar automáticamente los turnos
+(async () => {
+  try {
+    await db.actualizarTurnosAutomaticamente();
+    console.log('✅ Turnos actualizados automáticamente al iniciar el servidor');
+  } catch (error) {
+    console.error('❌ Error actualizando turnos al inicio:', error);
+  }
+})();
+
+// --- Opcional: ejecutar cada X minutos mientras Node está corriendo
+setInterval(async () => {
+  try {
+    await db.actualizarTurnosAutomaticamente();
+    console.log('🔄 Turnos actualizados automáticamente (intervalo)');
+  } catch (error) {
+    console.error('❌ Error actualizando turnos en intervalo:', error);
+  }
+}, 5 * 60 * 1000); // cada 5 minutos
+
 // Ruta principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -199,13 +219,16 @@ app.post('/api/turnos', async (req, res) => {
 
 app.put('/api/turnos/:id/estado', async (req, res) => {
   try {
-    const result = await db.actualizarEstadoTurno(req.params.id, req.body.estado);
+    const { id } = req.params;
+    const { estado } = req.body;
+    const result = await db.actualizarEstadoTurno(id, estado);
     res.json(result);
   } catch (error) {
     console.error('Error al actualizar estado de turno:', error);
-    res.status(500).json({ error: 'Error al actualizar estado' });
+    res.status(500).json({ error: 'Error al actualizar estado de turno' });
   }
 });
+
 // POST login (credenciales en body JSON)
 app.post('/api/usuarios/login', async (req, res) => {
   try {
@@ -591,17 +614,8 @@ function broadcast(data) {
 
 // Iniciar servidor en el mismo puerto
 server.listen(port, '0.0.0.0', async () => {
-  console.log(`🚀 Servidor HTTP+WS en http://0.0.0.0:${port}`);
+  console.log(`🚀 Servidor HTTP+WS en http://0.0.0.0:${port}`);});
 
-  setTimeout(async () => {
-    try {
-      await db.actualizarTurnosPendientes();
-      console.log('Turnos pendientes actualizados correctamente');
-    } catch (err) {
-      console.warn('No se pudo actualizar turnos pendientes:', err.message);
-    }
-  }, 2000);
-});
 
 // Cerrar servidor limpiamente
 process.on('SIGINT', async () => {

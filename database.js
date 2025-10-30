@@ -408,18 +408,22 @@ actualizarTurnosAutomaticamente() {
 
             // --- Turnos pendientes de días anteriores → 'perdido'
             const turnosPendientes = await this.obtenerTurnos();
-            for (const turno of turnosPendientes) {
-                if (turno.estado === 'pendiente') {
-                    const fechaTurno = new Date(turno.fecha);
-                    const hoy = new Date();
-                    hoy.setHours(0,0,0,0);
-                    if (fechaTurno < hoy) {
-                        await this.actualizarEstadoTurno(turno.id_turno, 'perdido');
-                        console.log(`Turno ${turno.id_turno} marcado como perdido`);
-                    }
-                }
-            }
+        for (const turno of turnosPendientes) {
+        const fechaTurno = new Date(turno.fecha);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0); // Normaliza la hora a las 00:00
 
+        // Si la fecha del turno ya pasó
+        if (fechaTurno < hoy) {
+            if (turno.estado === 'pendiente') {
+            await this.actualizarEstadoTurno(turno.id_turno, 'perdido');
+            console.log(`Turno ${turno.id_turno} (pendiente) marcado como perdido`);
+            } else if (turno.estado === 'ingreso') {
+            await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
+            console.log(`Turno ${turno.id_turno} (ingreso) marcado como finalizado`);
+            }
+        }
+        }
             resolve(true);
         } catch (err) {
             reject(err);

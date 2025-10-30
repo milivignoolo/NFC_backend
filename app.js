@@ -224,6 +224,101 @@ app.post('/api/usuarios/login', async (req, res) => {
     res.status(500).json({ error: 'Error al intentar iniciar sesión' });
   }
 });
+// ==========================
+// ENDPOINTS PARA DASHBOARD (versión con promesas)
+// ==========================
+
+// Helper function para ejecutar queries
+const executeQuery = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+// Accesos de hoy
+app.get('/api/dashboard/accesos-hoy', async (req, res) => {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const result = await executeQuery(
+      `SELECT COUNT(*) as count FROM entrada WHERE fecha = ? AND accion IN ('entrada', 'salida')`,
+      [hoy]
+    );
+    res.json({ accesosHoy: result[0]?.count || 0 });
+  } catch (error) {
+    console.error('Error al obtener accesos de hoy:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Personas actualmente dentro
+app.get('/api/dashboard/personas-dentro', async (req, res) => {
+  try {
+    const result = await executeQuery(`
+      SELECT COUNT(DISTINCT e1.id_usuario) as count
+      FROM entrada e1
+      WHERE e1.accion = 'entrada'
+      AND e1.id_usuario IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 
+        FROM entrada e2 
+        WHERE e2.id_usuario = e1.id_usuario 
+        AND e2.accion = 'salida'
+        AND (e2.fecha > e1.fecha OR (e2.fecha = e1.fecha AND e2.hora > e1.hora))
+      )
+    `);
+    res.json({ personasDentro: result[0]?.count || 0 });
+  } catch (error) {
+    console.error('Error al obtener personas dentro:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Última actividad
+app.get('/api/dashboard/ultima-actividad', async (req, res) => {
+  try {
+    const result = await executeQuery(`
+      SELECT e.*, u.nombre_completo 
+      FROM entrada e 
+      LEFT JOIN usuario u ON e.id_usuario = u.id_usuario 
+      ORDER BY e.fecha DESC, e.hora DESC 
+      LIMIT 1
+    `);
+    res.json(result[0] || null);
+  } catch (error) {
+    console.error('Error al obtener última actividad:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Registro de accesos de hoy
+app.get('/api/dashboard/accesos-hoy-detalle', async (req, res) => {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const result = await executeQuery(`
+      SELECT 
+        e.id_entrada,
+        e.accion as movimiento,
+        e.fecha,
+        e.hora,
+        e.uid_tarjeta,
+        e.id_usuario,
+        u.nombre_completo,
+        e.tipo_uso
+      FROM entrada e
+      LEFT JOIN usuario u ON e.id_usuario = u.id_usuario
+      WHERE e.fecha = ?
+      ORDER BY e.fecha DESC, e.hora DESC
+    `, [hoy]);
+    res.json(result);
+  } catch (error) {
+    console.error('Error al obtener accesos detalle:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Computadoras
 app.get('/api/computadoras', async (req, res) => {
   try {

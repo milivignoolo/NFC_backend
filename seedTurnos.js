@@ -26,8 +26,8 @@ async function cargarTurnos() {
         horarios.push(`${h.toString().padStart(2, '0')}:30`);
     }
 
-    // Tipos de uso de salas
-    const tiposUso = ['Sala de estudio'];
+    // Áreas disponibles
+    const areas = ['sala', 'notebooks'];
 
     let turnosCreados = 0;
 
@@ -35,9 +35,11 @@ async function cargarTurnos() {
         const fecha = fechas[0]; // todos los turnos hoy
         const hora = horarios[Math.floor(Math.random() * horarios.length)];
         const usuario = usuarios[Math.floor(Math.random() * usuarios.length)];
-        const tipoUso = tiposUso[0];
+        const area = areas[Math.floor(Math.random() * areas.length)];
+        const tematica = area === 'sala' ? 'Uso de Salas para Estudio' : '1 Notebook';
+        const tipoAsistencia = Math.random() > 0.5 ? 'presencial' : 'virtual';
 
-        // Estado aleatorio
+        // Estado aleatorio para pruebas
         const rand = Math.random();
         let estadoTurno;
         if (rand < 0.7) estadoTurno = 'pendiente';
@@ -45,13 +47,21 @@ async function cargarTurnos() {
         else estadoTurno = 'perdido';
 
         try {
-            await db.registrarTurno({
+            // Crear el turno (se crea con estado 'pendiente' por defecto)
+            const turnoCreado = await db.registrarTurno({
                 fecha,
                 hora,
-                tipo_uso: tipoUso,
-                estado: estadoTurno,
+                area,
+                tematica,
+                tipo_asistencia: tipoAsistencia,
                 id_usuario: usuario.id_usuario
             });
+
+            // Actualizar al estado aleatorio para pruebas/desarrollo
+            if (estadoTurno !== 'pendiente') {
+                await db.actualizarEstadoTurno(turnoCreado.id_turno, estadoTurno);
+            }
+
             turnosCreados++;
         } catch (error) {
             console.error(`Error creando turno para ${usuario.nombre_completo} en ${fecha} ${hora}:`, error.message);

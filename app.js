@@ -221,11 +221,38 @@ app.put('/api/turnos/:id/estado', async (req, res) => {
   try {
     const { id } = req.params;
     const { estado } = req.body;
+
+    // Validar que se proporcione un estado
+    if (!estado) {
+      return res.status(400).json({ error: 'El estado es requerido' });
+    }
+
+    // Validar que el estado sea uno de los valores permitidos
+    const estadosValidos = ['pendiente', 'ingreso', 'finalizado', 'perdido'];
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({ 
+        error: 'Estado inválido',
+        estadosValidos: estadosValidos
+      });
+    }
+
+    // Actualizar el estado
     const result = await db.actualizarEstadoTurno(id, estado);
-    res.json(result);
+    
+    // Verificar si se actualizó algún registro
+    if (result.updated === 0) {
+      return res.status(404).json({ error: 'Turno no encontrado' });
+    }
+
+    res.json({ 
+      message: 'Estado actualizado correctamente',
+      id_turno: id,
+      nuevo_estado: estado,
+      updated: result.updated
+    });
   } catch (error) {
     console.error('Error al actualizar estado de turno:', error);
-    res.status(500).json({ error: 'Error al actualizar estado de turno' });
+    res.status(500).json({ error: 'Error al actualizar estado de turno', details: error.message });
   }
 });
 

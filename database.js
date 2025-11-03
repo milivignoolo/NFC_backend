@@ -145,7 +145,10 @@ async init() {
             id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
             fecha DATETIME NOT NULL,
             hora TEXT NOT NULL,
-            tipo_uso TEXT,
+            area TEXT,
+            tematica TEXT,
+            tipo_asistencia TEXT,
+            observaciones TEXT,
             estado TEXT NOT NULL CHECK(estado IN ('pendiente', 'ingreso', 'finalizado', 'perdido')) DEFAULT 'pendiente',
             id_usuario INTEGER NOT NULL,
             FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
@@ -193,9 +196,69 @@ async init() {
                     if (err) reject(err);
                     else {
                         console.log("Tablas creadas con estructura nueva");
-                        resolve();
+                        // Migrar columnas faltantes en la tabla turno
+                        this.migrarTablaTurno()
+                            .then(() => resolve())
+                            .catch(reject);
                     }
                 });
+            });
+        });
+    }
+
+    migrarTablaTurno() {
+        return new Promise((resolve, reject) => {
+            // Columnas a agregar si no existen
+            const columnas = [
+                { nombre: 'area', tipo: 'TEXT' },
+                { nombre: 'tematica', tipo: 'TEXT' },
+                { nombre: 'tipo_asistencia', tipo: 'TEXT' },
+                { nombre: 'observaciones', tipo: 'TEXT' }
+            ];
+
+            // Verificar si la tabla existe y obtener sus columnas
+            this.db.all("PRAGMA table_info(turno)", [], (err, columns) => {
+                if (err) {
+                    console.error("Error obteniendo información de la tabla turno:", err);
+                    return reject(err);
+                }
+
+                const columnasExistentes = columns.map(c => c.name.toLowerCase());
+                const columnasAAgregar = columnas.filter(
+                    col => !columnasExistentes.includes(col.nombre.toLowerCase())
+                );
+
+                if (columnasAAgregar.length === 0) {
+                    console.log("✅ Tabla turno ya tiene todas las columnas necesarias");
+                    return resolve();
+                }
+
+                // Agregar columnas faltantes de forma secuencial
+                const agregarColumnas = async () => {
+                    for (const col of columnasAAgregar) {
+                        await new Promise((res, rej) => {
+                            const sql = `ALTER TABLE turno ADD COLUMN ${col.nombre} ${col.tipo}`;
+                            this.db.run(sql, (err) => {
+                                if (err) {
+                                    // Si la columna ya existe (por error previo), continuar
+                                    if (err.message.includes('duplicate column') || err.message.includes('duplicate column name')) {
+                                        console.log(`⚠️ Columna ${col.nombre} ya existe, omitiendo...`);
+                                        res();
+                                    } else {
+                                        console.error(`Error agregando columna ${col.nombre}:`, err);
+                                        rej(err);
+                                    }
+                                } else {
+                                    console.log(`✅ Columna ${col.nombre} agregada a la tabla turno`);
+                                    res();
+                                }
+                            });
+                        });
+                    }
+                    resolve();
+                };
+
+                agregarColumnas().catch(reject);
             });
         });
     }
@@ -248,9 +311,9 @@ async init() {
           this.db.run(sql, values, function(err) {
             if (err) reject(err);
             else resolve({ updatedRows: this.changes });
-          });
+            });
         });
-      }
+    }
 
       
 
@@ -360,15 +423,33 @@ async init() {
     }
     
 
-    registrarTurno({ fecha, hora, tipo_uso, id_usuario }) {
+    registrarTurno({ fecha, hora, id_usuario, area, tematica, tipo_asistencia, observaciones }) {
         return new Promise((resolve, reject) => {
             const sql = `
-                INSERT INTO turno (fecha, hora, tipo_uso, id_usuario)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO turno (fecha, hora, area, tematica, tipo_asistencia, observaciones, id_usuario)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             `;
-            this.db.run(sql, [fecha, hora, tipo_uso, id_usuario], function (err) {
+            this.db.run(sql, [
+                fecha, 
+                hora, 
+                area || null,
+                tematica || null,
+                tipo_asistencia || null,
+                observaciones || null,
+                id_usuario
+            ], function (err) {
                 if (err) reject(err);
-                else resolve({ id_turno: this.lastID });
+                else resolve({ 
+                    id_turno: this.lastID,
+                    fecha,
+                    hora,
+                    area,
+                    tematica,
+                    tipo_asistencia,
+                    observaciones,
+                    estado: 'pendiente', // Estado inicial por defecto
+                    id_usuario
+                });
             });
         });
     }

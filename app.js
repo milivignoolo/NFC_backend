@@ -518,21 +518,6 @@ app.post('/api/nfc', async (req, res) => {
   }
 });
 
-// Libros
-app.get('/api/libros/buscar', async (req, res) => {
-  try {
-    const { query } = req.query;
-    if (!query) {
-      return res.status(400).json({ error: 'Falta parámetro de búsqueda' });
-    }
-    const libros = await db.buscarLibros(query);
-    res.json(libros);
-  } catch (error) {
-    console.error('Error al buscar libros:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 app.get('/api/libros/uid/:uid', async (req, res) => {
   try {
     const { uid } = req.params;

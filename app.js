@@ -5,28 +5,30 @@ const NFCDatabase = require('./database');
 const app = express();
 const port = 3000;
 const db = new NFCDatabase();
+const { verificarPrestamosAVencer } = require('./utils/notificaciones');
+
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- Al iniciar el servidor, actualizar automáticamente los turnos
 (async () => {
   try {
     await db.actualizarTurnosAutomaticamente();
-    console.log('✅ Turnos actualizados automáticamente al iniciar el servidor');
+    console.log('Turnos actualizados automáticamente al iniciar el servidor');
   } catch (error) {
-    console.error('❌ Error actualizando turnos al inicio:', error);
+    console.error('Error actualizando turnos al inicio:', error);
   }
 })();
 
-// --- Opcional: ejecutar cada X minutos mientras Node está corriendo
+
+// --- Opcional: ejecutar cada X minutos mientras 
 setInterval(async () => {
   try {
     await db.actualizarTurnosAutomaticamente();
-    console.log('🔄 Turnos actualizados automáticamente (intervalo)');
+    console.log('Turnos actualizados automáticamente (intervalo)');
   } catch (error) {
-    console.error('❌ Error actualizando turnos en intervalo:', error);
+    console.error('Error actualizando turnos en intervalo:', error);
   }
 }, 5 * 60 * 1000); // cada 5 minutos
 
@@ -622,11 +624,11 @@ const wss = new WebSocket.Server({ server });
 
 // Evento: cuando un cliente web se conecta
 wss.on('connection', (ws) => {
-  console.log('🌐 Cliente WebSocket conectado');
+  console.log('Cliente WebSocket conectado');
 
   ws.send(JSON.stringify({ message: 'Conectado al servidor WebSocket' }));
 
-  ws.on('close', () => console.log('❌ Cliente desconectado'));
+  ws.on('close', () => console.log('Cliente desconectado'));
 });
 
 // Función para emitir un mensaje a todos los clientes conectados
@@ -638,6 +640,19 @@ function broadcast(data) {
     }
   });
 }
+
+// --- Notificaciones automáticas de préstamos ---
+async function iniciarVerificacionPrestamos() {
+  console.log('Iniciando verificación automática de préstamos...');
+  await verificarPrestamosAVencer(db); // Primera ejecución inmediata
+  setInterval(async () => {
+    console.log('Ejecutando verificación diaria de préstamos...');
+    await verificarPrestamosAVencer(db);
+  }, 24 * 60 * 60 * 1000); // Cada 24 horas
+}
+
+iniciarVerificacionPrestamos();
+
 
 // Iniciar servidor en el mismo puerto
 server.listen(port, '0.0.0.0', async () => {

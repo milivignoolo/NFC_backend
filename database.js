@@ -835,6 +835,7 @@ actualizarTurnosAutomaticamente() {
                     p.id_prestamo,
                     l.titulo,
                     u.nombre_completo AS usuario,
+                    u.email,
                     u.tipo_usuario,
                     p.fecha_inicial,
                     p.fecha_final,

@@ -14,9 +14,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 (async () => {
   try {
     await db.actualizarTurnosAutomaticamente();
-    console.log('✅ Turnos actualizados automáticamente al iniciar el servidor');
+    console.log('Turnos actualizados automáticamente al iniciar el servidor');
   } catch (error) {
-    console.error('❌ Error actualizando turnos al inicio:', error);
+    console.error('Error actualizando turnos al inicio:', error);
   }
 })();
 
@@ -24,9 +24,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 setInterval(async () => {
   try {
     await db.actualizarTurnosAutomaticamente();
-    console.log('🔄 Turnos actualizados automáticamente (intervalo)');
+    console.log('Turnos actualizados automáticamente (intervalo)');
   } catch (error) {
-    console.error('❌ Error actualizando turnos en intervalo:', error);
+    console.error('Error actualizando turnos en intervalo:', error);
   }
 }, 5 * 60 * 1000); // cada 5 minutos
 
@@ -595,11 +595,11 @@ const wss = new WebSocket.Server({ server });
 
 // Evento: cuando un cliente web se conecta
 wss.on('connection', (ws) => {
-  console.log('🌐 Cliente WebSocket conectado');
+  console.log('Cliente WebSocket conectado');
 
   ws.send(JSON.stringify({ message: 'Conectado al servidor WebSocket' }));
 
-  ws.on('close', () => console.log('❌ Cliente desconectado'));
+  ws.on('close', () => console.log('Cliente desconectado'));
 });
 
 // Función para emitir un mensaje a todos los clientes conectados

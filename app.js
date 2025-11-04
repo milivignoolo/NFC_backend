@@ -21,8 +21,6 @@ app.use(express.static(path.join(__dirname, 'public')));
   }
 })();
 
-
-// --- Opcional: ejecutar cada X minutos mientras 
 setInterval(async () => {
   try {
     await db.actualizarTurnosAutomaticamente();
@@ -30,7 +28,7 @@ setInterval(async () => {
   } catch (error) {
     console.error('Error actualizando turnos en intervalo:', error);
   }
-}, 5 * 60 * 1000); // cada 5 minutos
+}, 120 * 60 * 1000);
 
 // Ruta principal
 app.get('/', (req, res) => {
@@ -641,7 +639,7 @@ iniciarVerificacionPrestamos();
 
 // Iniciar servidor en el mismo puerto
 server.listen(port, '0.0.0.0', async () => {
-  console.log(`🚀 Servidor HTTP+WS en http://0.0.0.0:${port}`);});
+  console.log(`Servidor HTTP+WS corriendo`);});
 
 
 // Cerrar servidor limpiamente

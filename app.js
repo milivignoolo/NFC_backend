@@ -295,7 +295,7 @@ app.get('/api/dashboard/accesos-hoy', async (req, res) => {
   try {
     const hoy = new Date().toISOString().split('T')[0];
     const result = await executeQuery(
-      `SELECT COUNT(*) as count FROM entrada WHERE fecha = ? AND accion IN ('entrada', 'salida')`,
+      `SELECT COUNT(*) as count FROM entrada WHERE fecha = ? AND accion IN ('entrada')`,
       [hoy]
     );
     res.json({ accesosHoy: result[0]?.count || 0 });

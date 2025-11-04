@@ -5,12 +5,13 @@ const NFCDatabase = require('./database');
 const app = express();
 const port = 3000;
 const db = new NFCDatabase();
+const { verificarPrestamosAVencer } = require('./utils/notificaciones');
+
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- Al iniciar el servidor, actualizar automáticamente los turnos
 (async () => {
   try {
     await db.actualizarTurnosAutomaticamente();
@@ -20,7 +21,6 @@ app.use(express.static(path.join(__dirname, 'public')));
   }
 })();
 
-// --- Opcional: ejecutar cada X minutos mientras Node está corriendo
 setInterval(async () => {
   try {
     await db.actualizarTurnosAutomaticamente();
@@ -28,7 +28,7 @@ setInterval(async () => {
   } catch (error) {
     console.error('Error actualizando turnos en intervalo:', error);
   }
-}, 5 * 60 * 1000); // cada 5 minutos
+}, 120 * 60 * 1000);
 
 // Ruta principal
 app.get('/', (req, res) => {
@@ -221,11 +221,38 @@ app.put('/api/turnos/:id/estado', async (req, res) => {
   try {
     const { id } = req.params;
     const { estado } = req.body;
+
+    // Validar que se proporcione un estado
+    if (!estado) {
+      return res.status(400).json({ error: 'El estado es requerido' });
+    }
+
+    // Validar que el estado sea uno de los valores permitidos
+    const estadosValidos = ['pendiente', 'ingreso', 'finalizado', 'perdido'];
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({ 
+        error: 'Estado inválido',
+        estadosValidos: estadosValidos
+      });
+    }
+
+    // Actualizar el estado
     const result = await db.actualizarEstadoTurno(id, estado);
-    res.json(result);
+    
+    // Verificar si se actualizó algún registro
+    if (result.updated === 0) {
+      return res.status(404).json({ error: 'Turno no encontrado' });
+    }
+
+    res.json({ 
+      message: 'Estado actualizado correctamente',
+      id_turno: id,
+      nuevo_estado: estado,
+      updated: result.updated
+    });
   } catch (error) {
     console.error('Error al actualizar estado de turno:', error);
-    res.status(500).json({ error: 'Error al actualizar estado de turno' });
+    res.status(500).json({ error: 'Error al actualizar estado de turno', details: error.message });
   }
 });
 
@@ -266,7 +293,7 @@ app.get('/api/dashboard/accesos-hoy', async (req, res) => {
   try {
     const hoy = new Date().toISOString().split('T')[0];
     const result = await executeQuery(
-      `SELECT COUNT(*) as count FROM entrada WHERE fecha = ? AND accion IN ('entrada', 'salida')`,
+      `SELECT COUNT(*) as count FROM entrada WHERE fecha = ? AND accion IN ('entrada')`,
       [hoy]
     );
     res.json({ accesosHoy: result[0]?.count || 0 });
@@ -489,21 +516,6 @@ app.post('/api/nfc', async (req, res) => {
   }
 });
 
-// Libros
-app.get('/api/libros/buscar', async (req, res) => {
-  try {
-    const { query } = req.query;
-    if (!query) {
-      return res.status(400).json({ error: 'Falta parámetro de búsqueda' });
-    }
-    const libros = await db.buscarLibros(query);
-    res.json(libros);
-  } catch (error) {
-    console.error('Error al buscar libros:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 app.get('/api/libros/uid/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
@@ -612,9 +624,22 @@ function broadcast(data) {
   });
 }
 
+// --- Notificaciones automáticas de préstamos ---
+async function iniciarVerificacionPrestamos() {
+  console.log('Iniciando verificación automática de préstamos...');
+  await verificarPrestamosAVencer(db); // Primera ejecución inmediata
+  setInterval(async () => {
+    console.log('Ejecutando verificación diaria de préstamos...');
+    await verificarPrestamosAVencer(db);
+  }, 24 * 60 * 60 * 1000); // Cada 24 horas
+}
+
+iniciarVerificacionPrestamos();
+
+
 // Iniciar servidor en el mismo puerto
 server.listen(port, '0.0.0.0', async () => {
-  console.log(`🚀 Servidor HTTP+WS en http://0.0.0.0:${port}`);});
+  console.log(`Servidor HTTP+WS corriendo`);});
 
 
 // Cerrar servidor limpiamente

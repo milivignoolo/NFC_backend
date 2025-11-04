@@ -145,7 +145,10 @@ async init() {
             id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
             fecha DATETIME NOT NULL,
             hora TEXT NOT NULL,
-            tipo_uso TEXT,
+            area TEXT,
+            tematica TEXT,
+            tipo_asistencia TEXT,
+            observaciones TEXT,
             estado TEXT NOT NULL CHECK(estado IN ('pendiente', 'ingreso', 'finalizado', 'perdido')) DEFAULT 'pendiente',
             id_usuario INTEGER NOT NULL,
             FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
@@ -193,9 +196,69 @@ async init() {
                     if (err) reject(err);
                     else {
                         console.log("Tablas creadas con estructura nueva");
-                        resolve();
+                        // Migrar columnas faltantes en la tabla turno
+                        this.migrarTablaTurno()
+                            .then(() => resolve())
+                            .catch(reject);
                     }
                 });
+            });
+        });
+    }
+
+    migrarTablaTurno() {
+        return new Promise((resolve, reject) => {
+            // Columnas a agregar si no existen
+            const columnas = [
+                { nombre: 'area', tipo: 'TEXT' },
+                { nombre: 'tematica', tipo: 'TEXT' },
+                { nombre: 'tipo_asistencia', tipo: 'TEXT' },
+                { nombre: 'observaciones', tipo: 'TEXT' }
+            ];
+
+            // Verificar si la tabla existe y obtener sus columnas
+            this.db.all("PRAGMA table_info(turno)", [], (err, columns) => {
+                if (err) {
+                    console.error("Error obteniendo información de la tabla turno:", err);
+                    return reject(err);
+                }
+
+                const columnasExistentes = columns.map(c => c.name.toLowerCase());
+                const columnasAAgregar = columnas.filter(
+                    col => !columnasExistentes.includes(col.nombre.toLowerCase())
+                );
+
+                if (columnasAAgregar.length === 0) {
+                    console.log("Tabla turno ya tiene todas las columnas necesarias");
+                    return resolve();
+                }
+
+                // Agregar columnas faltantes de forma secuencial
+                const agregarColumnas = async () => {
+                    for (const col of columnasAAgregar) {
+                        await new Promise((res, rej) => {
+                            const sql = `ALTER TABLE turno ADD COLUMN ${col.nombre} ${col.tipo}`;
+                            this.db.run(sql, (err) => {
+                                if (err) {
+                                    // Si la columna ya existe (por error previo), continuar
+                                    if (err.message.includes('duplicate column') || err.message.includes('duplicate column name')) {
+                                        console.log(`⚠️ Columna ${col.nombre} ya existe, omitiendo...`);
+                                        res();
+                                    } else {
+                                        console.error(`Error agregando columna ${col.nombre}:`, err);
+                                        rej(err);
+                                    }
+                                } else {
+                                    console.log(`✅ Columna ${col.nombre} agregada a la tabla turno`);
+                                    res();
+                                }
+                            });
+                        });
+                    }
+                    resolve();
+                };
+
+                agregarColumnas().catch(reject);
             });
         });
     }
@@ -248,9 +311,9 @@ async init() {
           this.db.run(sql, values, function(err) {
             if (err) reject(err);
             else resolve({ updatedRows: this.changes });
-          });
+            });
         });
-      }
+    }
 
       
 
@@ -360,15 +423,33 @@ async init() {
     }
     
 
-    registrarTurno({ fecha, hora, tipo_uso, id_usuario }) {
+    registrarTurno({ fecha, hora, id_usuario, area, tematica, tipo_asistencia, observaciones }) {
         return new Promise((resolve, reject) => {
             const sql = `
-                INSERT INTO turno (fecha, hora, tipo_uso, id_usuario)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO turno (fecha, hora, area, tematica, tipo_asistencia, observaciones, id_usuario)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             `;
-            this.db.run(sql, [fecha, hora, tipo_uso, id_usuario], function (err) {
+            this.db.run(sql, [
+                fecha, 
+                hora, 
+                area || null,
+                tematica || null,
+                tipo_asistencia || null,
+                observaciones || null,
+                id_usuario
+            ], function (err) {
                 if (err) reject(err);
-                else resolve({ id_turno: this.lastID });
+                else resolve({ 
+                    id_turno: this.lastID,
+                    fecha,
+                    hora,
+                    area,
+                    tematica,
+                    tipo_asistencia,
+                    observaciones,
+                    estado: 'pendiente', // Estado inicial por defecto
+                    id_usuario
+                });
             });
         });
     }
@@ -389,47 +470,46 @@ async init() {
     }
 
     // Actualiza turnos automáticamente: ingreso -> finalizado y pendientes antiguos -> perdido
-actualizarTurnosAutomaticamente() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const ahora = new Date();
+    actualizarTurnosAutomaticamente() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const ahora = new Date();
 
-            // --- Turnos con estado 'ingreso' hace más de 2 horas → 'finalizado'
-            const turnosIngreso = await this.obtenerTurnos();
-            for (const turno of turnosIngreso) {
-                if (turno.estado === 'ingreso') {
-                    const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}`);
-                    if (ahora - fechaHoraTurno >= 2 * 60 * 60 * 1000) {
-                        await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
-                        console.log(`Turno ${turno.id_turno} finalizado automáticamente`);
+                // --- Turnos con estado 'ingreso' hace más de 2 horas → 'finalizado'
+                const turnosIngreso = await this.obtenerTurnos();
+                for (const turno of turnosIngreso) {
+                    if (turno.estado === 'ingreso') {
+                        const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}`);
+                        if (ahora - fechaHoraTurno >= 2 * 60 * 60 * 1000) {
+                            await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
+                        }
+
+                    }
+                }
+
+                const turnosPendientes = await this.obtenerTurnos();
+                for (const turno of turnosPendientes) {
+                const fechaTurno = new Date(turno.fecha);
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0); // Normaliza la hora a las 00:00
+
+                // Si la fecha del turno ya pasó
+                if (fechaTurno < hoy) {
+                    if (turno.estado === 'pendiente') {
+                    await this.actualizarEstadoTurno(turno.id_turno, 'perdido');
+                    console.log(`Turno ${turno.id_turno} (pendiente) marcado como perdido`);
+                    } else if (turno.estado === 'ingreso') {
+                    await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
+                    console.log(`Turno ${turno.id_turno} (ingreso) marcado como finalizado`);
                     }
                 }
             }
-
-            // --- Turnos pendientes de días anteriores → 'perdido'
-            const turnosPendientes = await this.obtenerTurnos();
-        for (const turno of turnosPendientes) {
-        const fechaTurno = new Date(turno.fecha);
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0); // Normaliza la hora a las 00:00
-
-        // Si la fecha del turno ya pasó
-        if (fechaTurno < hoy) {
-            if (turno.estado === 'pendiente') {
-            await this.actualizarEstadoTurno(turno.id_turno, 'perdido');
-            console.log(`Turno ${turno.id_turno} (pendiente) marcado como perdido`);
-            } else if (turno.estado === 'ingreso') {
-            await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
-            console.log(`Turno ${turno.id_turno} (ingreso) marcado como finalizado`);
+                resolve(true);
+            } catch (err) {
+                reject(err);
             }
-        }
-        }
-            resolve(true);
-        } catch (err) {
-            reject(err);
-        }
-    });
-}
+        });
+    }
 
 
     actualizarTurnosPendientes() {
@@ -570,7 +650,7 @@ actualizarTurnosAutomaticamente() {
         return new Promise((resolve, reject) => {
             const db = this.db;
             db.serialize(() => {
-                // 1️⃣ Marcar el préstamo como finalizado
+                //Marcar el préstamo como finalizado
                 db.run(
                     `
                     UPDATE prestamo_computadora
@@ -581,7 +661,7 @@ actualizarTurnosAutomaticamente() {
                     function (err) {
                         if (err) return reject(err);
     
-                        // 2️⃣ Liberar la computadora asociada
+                        //Liberar la computadora asociada
                         db.run(
                             `
                             UPDATE computadora
@@ -710,7 +790,7 @@ actualizarTurnosAutomaticamente() {
     
             const db = this.db;
     
-            // 1️⃣ Verificar si el libro está disponible
+            // Verificar si el libro está disponible
             const sqlVerificarLibro = `SELECT estado FROM libro WHERE id_libro = ?`;
     
             db.get(sqlVerificarLibro, [id_libro], (err, row) => {
@@ -721,10 +801,10 @@ actualizarTurnosAutomaticamente() {
                     return reject(new Error("El libro ya está prestado y no puede ser prestado nuevamente."));
                 }
     
-                // 2️⃣ Calcular fecha final (SQLite usa formato YYYY-MM-DD)
+                // Calcular fecha final (SQLite usa formato YYYY-MM-DD)
                 const fechaFinalSQL = `DATE('${fecha_inicial}', '+${dias_prestamo} day')`;
     
-                // 3️⃣ Registrar el préstamo
+                // Registrar el préstamo
                 const sqlPrestamo = `
                     INSERT INTO prestamo_libro (fecha_inicial, fecha_final, operador, id_usuario, id_libro, estado)
                     VALUES (?, ${fechaFinalSQL}, ?, ?, ?, 'en_proceso')
@@ -735,7 +815,7 @@ actualizarTurnosAutomaticamente() {
     
                     const idPrestamo = this.lastID;
     
-                    // 4️⃣ Actualizar estado del libro a "en_prestamo"
+                    // Actualizar estado del libro a "en_prestamo"
                     const sqlUpdateLibro = `UPDATE libro SET estado = 'en_prestamo' WHERE id_libro = ?`;
     
                     db.run(sqlUpdateLibro, [id_libro], function (err3) {
@@ -754,6 +834,7 @@ actualizarTurnosAutomaticamente() {
                     p.id_prestamo,
                     l.titulo,
                     u.nombre_completo AS usuario,
+                    u.email,
                     u.tipo_usuario,
                     p.fecha_inicial,
                     p.fecha_final,
@@ -766,36 +847,6 @@ actualizarTurnosAutomaticamente() {
             `;
     
             this.db.all(sql, [], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
-    }
-
-    buscarLibros(query) {
-        return new Promise((resolve, reject) => {
-            if (!query || query.trim() === "") {
-                resolve([]);
-                return;
-            }
-    
-            const sql = `
-                SELECT id_libro, titulo, sub_titulo, asignatura, autor, estado, uid_tarjeta
-                FROM libro
-                WHERE titulo LIKE ? 
-                   OR sub_titulo LIKE ?
-                   OR asignatura LIKE ?
-                   OR autor LIKE ?
-                   OR segundo_autor LIKE?
-                   OR tercer_autor LIKE?
-                   OR isbn LIKE?
-                   OR id_libro LIKE ?
-                   OR uid_tarjeta LIKE ?
-            `;
-    
-            const params = Array(4).fill(`%${query}%`);
-    
-            this.db.all(sql, params, (err, rows) => {
                 if (err) reject(err);
                 else resolve(rows);
             });

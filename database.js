@@ -1021,6 +1021,11 @@ async init() {
                     tipo_uso = 'computadora';
                 }
     
+                else {
+                    accion = null;
+                    tipo_uso = null;
+                }
+    
                 // Insertar registro
                 const sql = `
                     INSERT INTO entrada (accion, fecha, hora, tipo_uso, observacion, id_usuario, id_libro, id_computadora, uid_tarjeta)

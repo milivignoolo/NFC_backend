@@ -80,6 +80,7 @@ async init() {
                     id_libro INTEGER PRIMARY KEY AUTOINCREMENT,
                     titulo TEXT NOT NULL,
                     sub_titulo TEXT,
+                    portada TEXT,
                     asignatura TEXT NOT NULL,
                     autor TEXT NOT NULL,
                     segundo_autor TEXT,
@@ -242,14 +243,14 @@ async init() {
                                 if (err) {
                                     // Si la columna ya existe (por error previo), continuar
                                     if (err.message.includes('duplicate column') || err.message.includes('duplicate column name')) {
-                                        console.log(`⚠️ Columna ${col.nombre} ya existe, omitiendo...`);
+                                        console.log(`Columna ${col.nombre} ya existe, omitiendo...`);
                                         res();
                                     } else {
                                         console.error(`Error agregando columna ${col.nombre}:`, err);
                                         rej(err);
                                     }
                                 } else {
-                                    console.log(`✅ Columna ${col.nombre} agregada a la tabla turno`);
+                                    console.log(`Columna ${col.nombre} agregada a la tabla turno`);
                                     res();
                                 }
                             });

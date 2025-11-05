@@ -1011,6 +1011,36 @@ actualizarEstadoTurno(id_turno, estado) {
         });
     }
 
+    buscarLibros(query) {
+        return new Promise((resolve, reject) => {
+            if (!query || query.trim() === "") {
+                resolve([]);
+                return;
+            }
+    
+            const sql = `
+                SELECT id_libro, titulo, sub_titulo, asignatura, autor, estado, uid_tarjeta
+                FROM libro
+                WHERE titulo LIKE ? 
+                   OR sub_titulo LIKE ?
+                   OR asignatura LIKE ?
+                   OR autor LIKE ?
+                   OR segundo_autor LIKE?
+                   OR tercer_autor LIKE?
+                   OR isbn LIKE?
+                   OR id_libro LIKE ?
+                   OR uid_tarjeta LIKE ?
+            `;
+    
+            const params = Array(9).fill(`%${query}%`);
+    
+            this.db.all(sql, params, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+
     eliminarLibro(id_libro) {
         return new Promise((resolve, reject) => {
             this.db.run(`DELETE FROM libro WHERE id_libro = ?`, [id_libro], function (err) {

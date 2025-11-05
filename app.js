@@ -312,8 +312,6 @@ app.get('/api/dashboard/accesos-hoy', async (req, res) => {
     const accesosTurnos = resultTurnos[0]?.count || 0;
     const totalAccesos = accesosNFC + accesosTurnos;
     
-    console.log(`📊 Accesos hoy - NFC: ${accesosNFC}, Turnos: ${accesosTurnos}, Total: ${totalAccesos}`);
-    
     res.json({ accesosHoy: totalAccesos });
   } catch (error) {
     console.error('Error al obtener accesos de hoy:', error);
@@ -364,8 +362,6 @@ app.get('/api/dashboard/personas-dentro', async (req, res) => {
     const personasNFC = resultNFC[0]?.count || 0;
     const personasTurnos = resultTurnos[0]?.count || 0;
     const totalPersonas = personasNFC + personasTurnos;
-    
-    console.log(`👥 Personas dentro - NFC: ${personasNFC}, Turnos: ${personasTurnos}, Total: ${totalPersonas}`);
     
     res.json({ personasDentro: totalPersonas });
   } catch (error) {
@@ -420,12 +416,6 @@ app.get('/api/dashboard/ultima-actividad', async (req, res) => {
     });
     
     const ultimaActividad = resultado[0] || null;
-    
-    if (ultimaActividad) {
-      console.log(`⏰ Última actividad: ${ultimaActividad.tipo} - ${ultimaActividad.nombre_completo} - ${ultimaActividad.fecha} ${ultimaActividad.hora}`);
-    } else {
-      console.log('⏰ No hay actividad registrada');
-    }
     
     res.json(ultimaActividad);
   } catch (error) {
@@ -482,8 +472,6 @@ app.get('/api/dashboard/accesos-hoy-detalle', async (req, res) => {
         else resolve(rows);
       });
     });
-    
-    console.log(`📋 Registro accesos: ${result.length} registros (Todas las entradas/salidas)`);
     
     res.json(result);
   } catch (error) {
@@ -643,6 +631,17 @@ app.post('/api/nfc', async (req, res) => {
   } catch (error) {
     console.error('Error al registrar lectura NFC:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/libros/buscar', async (req, res) => {
+  try {
+      const query = req.query.query || '';
+      const resultados = await db.buscarLibros(query);
+      res.json(resultados);
+  } catch (error) {
+      console.error('Error en /api/libros/buscar:', error);
+      res.status(500).json({ error: 'Error al buscar libros' });
   }
 });
 

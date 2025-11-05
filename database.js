@@ -337,21 +337,6 @@ async init() {
 
     obtenerUsuarioPorUID(uid_tarjeta) {
         return new Promise((resolve, reject) => {
-            this.db.get(`SELECT id_usuario FROM usuario WHERE uid_tarjeta = ?`, [uid_tarjeta], (err, row) => {
-                if (err) reject(err);
-                else {
-                    if (row) {
-                        row.carreras = row.carreras ? JSON.parse(row.carreras) : [];
-                        row.materias = row.materias ? JSON.parse(row.materias) : [];
-                    }
-                    resolve(row || null);
-                }
-            });
-        });
-    }
-
-    obtenerUsuarioPorUID(uid_tarjeta) {
-        return new Promise((resolve, reject) => {
             const sql = `
                 SELECT id_usuario, tipo_usuario, nombre_completo, email, telefono, legajo, carreras, materias
                 FROM usuario
@@ -470,47 +455,58 @@ async init() {
         });
     }
 
-    // Actualiza turnos automáticamente: ingreso -> finalizado y pendientes antiguos -> perdido
-    actualizarTurnosAutomaticamente() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const ahora = new Date();
+// Actualiza turnos automáticamente: ingreso -> finalizado y pendientes antiguos -> perdido
+// Actualiza turnos automáticamente - VERSIÓN CORREGIDA
+actualizarTurnosAutomaticamente() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const ahora = new Date();
+            const hoy = new Date().toISOString().split('T')[0];
 
-                // --- Turnos con estado 'ingreso' hace más de 2 horas → 'finalizado'
-                const turnosIngreso = await this.obtenerTurnos();
-                for (const turno of turnosIngreso) {
-                    if (turno.estado === 'ingreso') {
-                        const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}`);
-                        if (ahora - fechaHoraTurno >= 2 * 60 * 60 * 1000) {
-                            await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
-                        }
+            console.log(`🔄 Actualizando turnos automáticamente - Hoy: ${hoy}`);
 
-                    }
-                }
-
-                const turnosPendientes = await this.obtenerTurnos();
-                for (const turno of turnosPendientes) {
+            // Obtener todos los turnos
+            const todosLosTurnos = await this.obtenerTurnos();
+            
+            for (const turno of todosLosTurnos) {
                 const fechaTurno = new Date(turno.fecha);
-                const hoy = new Date();
-                hoy.setHours(0, 0, 0, 0); // Normaliza la hora a las 00:00
-
-                // Si la fecha del turno ya pasó
-                if (fechaTurno < hoy) {
-                    if (turno.estado === 'pendiente') {
-                    await this.actualizarEstadoTurno(turno.id_turno, 'perdido');
-                    console.log(`Turno ${turno.id_turno} (pendiente) marcado como perdido`);
-                    } else if (turno.estado === 'ingreso') {
-                    await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
-                    console.log(`Turno ${turno.id_turno} (ingreso) marcado como finalizado`);
+                const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}`);
+                
+                // Solo procesar turnos de hoy o días anteriores
+                if (fechaTurno <= new Date(hoy)) {
+                    
+                    // Turnos con estado 'ingreso' de hoy - finalizar después de 2 horas
+                    if (turno.estado === 'ingreso' && turno.fecha === hoy) {
+                        const diferenciaHoras = (ahora - fechaHoraTurno) / (1000 * 60 * 60);
+                        
+                        if (diferenciaHoras >= 2) {
+                            await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
+                            console.log(`🔄 Turno ${turno.id_turno} (${turno.nombre_completo}) automáticamente finalizado después de ${diferenciaHoras.toFixed(1)} horas`);
+                        }
+                    }
+                    
+                    // Turnos 'pendiente' de días anteriores - marcar como perdidos
+                    else if (turno.estado === 'pendiente' && turno.fecha < hoy) {
+                        await this.actualizarEstadoTurno(turno.id_turno, 'perdido');
+                        console.log(`❌ Turno ${turno.id_turno} (${turno.nombre_completo}) del ${turno.fecha} marcado como perdido`);
+                    }
+                    
+                    // Turnos 'ingreso' de días anteriores - finalizar
+                    else if (turno.estado === 'ingreso' && turno.fecha < hoy) {
+                        await this.actualizarEstadoTurno(turno.id_turno, 'finalizado');
+                        console.log(`🔄 Turno ${turno.id_turno} (${turno.nombre_completo}) del ${turno.fecha} finalizado automáticamente`);
                     }
                 }
             }
-                resolve(true);
-            } catch (err) {
-                reject(err);
-            }
-        });
-    }
+            
+            console.log('✅ Actualización automática de turnos completada');
+            resolve(true);
+        } catch (err) {
+            console.error('❌ Error en actualización automática de turnos:', err);
+            reject(err);
+        }
+    });
+}
 
 
     actualizarTurnosPendientes() {
@@ -527,19 +523,83 @@ async init() {
         });
     }
 
-    actualizarEstadoTurno(id_turno, estado) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-                UPDATE turno
-                SET estado = ?
-                WHERE id_turno = ?
-            `;
-            this.db.run(sql, [estado, id_turno], function (err) {
-                if (err) reject(err);
-                else resolve({ updated: this.changes });
+actualizarEstadoTurno(id_turno, estado) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Primero obtener información del turno
+            const turno = await new Promise((res, rej) => {
+                this.db.get(
+                    `SELECT t.*, u.nombre_completo, u.uid_tarjeta 
+                     FROM turno t 
+                     LEFT JOIN usuario u ON t.id_usuario = u.id_usuario 
+                     WHERE t.id_turno = ?`,
+                    [id_turno],
+                    (err, row) => {
+                        if (err) rej(err);
+                        else res(row);
+                    }
+                );
             });
-        });
-    }
+
+            if (!turno) {
+                return reject(new Error('Turno no encontrado'));
+            }
+
+            console.log(`🔄 Actualizando turno ${id_turno} a estado: ${estado}`);
+
+            // Actualizar el estado del turno
+            this.db.run(
+                `UPDATE turno SET estado = ? WHERE id_turno = ?`,
+                [estado, id_turno],
+                async (err) => {
+                    if (err) return reject(err);
+
+                    // Si el estado cambia a 'finalizado', registrar salida automáticamente
+                    if (estado === 'finalizado') {
+                        try {
+                            const fecha = new Date().toISOString().split('T')[0];
+                            const hora = new Date().toISOString().split('T')[1].split('.')[0];
+                            
+                            console.log(`📝 Registrando salida automática para usuario ${turno.nombre_completo}`);
+                            
+                            await new Promise((res, rej) => {
+                                this.db.run(`
+                                    INSERT INTO entrada (accion, fecha, hora, tipo_uso, observacion, id_usuario, uid_tarjeta)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                `, [
+                                    'salida',
+                                    fecha,
+                                    hora,
+                                    'sala',
+                                    `Salida por finalización de turno - ${turno.area || 'Sin área'}`,
+                                    turno.id_usuario,
+                                    turno.uid_tarjeta // Usar el UID del usuario si existe
+                                ], function(err) {
+                                    if (err) {
+                                        console.error('❌ Error al insertar salida:', err);
+                                        rej(err);
+                                    } else {
+                                        console.log(`✅ Salida registrada exitosamente. ID: ${this.lastID}`);
+                                        res();
+                                    }
+                                });
+                            });
+                            
+                        } catch (salidaError) {
+                            console.error('❌ Error al registrar salida automática:', salidaError);
+                            // No rechazamos la promesa principal por este error
+                        }
+                    }
+
+                    resolve({ updated: 1 });
+                }
+            );
+        } catch (error) {
+            console.error('❌ Error en actualizarEstadoTurno:', error);
+            reject(error);
+        }
+    });
+}
 
     eliminarTurnosPorFecha(fecha) {
         return new Promise((resolve, reject) => {
@@ -960,101 +1020,107 @@ async init() {
         });
     }
 
-    registrarLecturaNFC(uid_tarjeta) {
-        return new Promise(async (resolve, reject) => {
-            if (!uid_tarjeta) return reject(new Error('Falta UID'));
-    
-            const fecha = new Date().toISOString().split('T')[0];
-            const hora = new Date().toISOString().split('T')[1].split('.')[0];
-    
-            try {
-                // Buscar asociaciones
-                const usuario = await this.obtenerUsuarioPorUID(uid_tarjeta);
-                const libro = await this.obtenerLibroPorUID(uid_tarjeta);
-                const computadora = await this.obtenerComputadoraPorUID(uid_tarjeta);
-    
-                let accion = null;
-                let tipo_uso = null;
-                let id_usuario = null;
-                let id_libro = null;
-                let id_computadora = null;
-    
-                // Determinar acción y tipo_uso
-                if (usuario) {
-                    id_usuario = usuario.id_usuario;
-    
-                    // Buscar última entrada del usuario
-                    const ultima = await new Promise((res, rej) => {
-                        this.db.get(
-                            `SELECT accion FROM entrada WHERE id_usuario = ? ORDER BY id_entrada DESC LIMIT 1`,
-                            [id_usuario],
-                            (err, row) => { if(err) rej(err); else res(row ? row.accion : null); }
-                        );
-                    });
-    
-                    accion = (ultima === 'entrada') ? 'salida' : 'entrada';
-                    tipo_uso = 'sala';
-    
-                } else if (libro) {
-                    id_libro = libro.id_libro;
-    
-                    const ultima = await new Promise((res, rej) => {
-                        this.db.get(
-                            `SELECT accion FROM entrada WHERE id_libro = ? ORDER BY id_entrada DESC LIMIT 1`,
-                            [id_libro],
-                            (err, row) => { if(err) rej(err); else res(row ? row.accion : null); }
-                        );
-                    });
-    
-                    tipo_uso = 'libro';
-    
-                } else if (computadora) {
-                    id_computadora = computadora.id_computadora;
-    
-                    const ultima = await new Promise((res, rej) => {
-                        this.db.get(
-                            `SELECT accion FROM entrada WHERE id_computadora = ? ORDER BY id_entrada DESC LIMIT 1`,
-                            [id_computadora],
-                            (err, row) => { if(err) rej(err); else res(row ? row.accion : null); }
-                        );
-                    });
-                    tipo_uso = 'computadora';
-                }
-    
-                else {
-                    accion = null;
-                    tipo_uso = null;
-                }
-    
-                // Insertar registro
-                const sql = `
-                    INSERT INTO entrada (accion, fecha, hora, tipo_uso, observacion, id_usuario, id_libro, id_computadora, uid_tarjeta)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `;
-    
-                this.db.run(sql, [
-                    accion, fecha, hora, tipo_uso, null, id_usuario, id_libro, id_computadora, uid_tarjeta
-                ], function(err) {
-                    if(err) return reject(err);
-    
-                    resolve({
-                        id_entrada: this.lastID,
-                        accion,
-                        tipo_uso,
-                        id_usuario,
-                        id_libro,
-                        id_computadora,
-                        fecha,
-                        hora,
-                        uid_tarjeta
-                    });
+   registrarLecturaNFC(uid_tarjeta) {
+    return new Promise(async (resolve, reject) => {
+        if (!uid_tarjeta) return reject(new Error('Falta UID'));
+
+        const fecha = new Date().toISOString().split('T')[0];
+        const hora = new Date().toISOString().split('T')[1].split('.')[0];
+
+        try {
+            // Buscar asociaciones
+            const usuario = await this.obtenerUsuarioPorUID(uid_tarjeta);
+            const libro = await this.obtenerLibroPorUID(uid_tarjeta);
+            const computadora = await this.obtenerComputadoraPorUID(uid_tarjeta);
+
+            let accion = 'salida'; // Valor por defecto que cumple con la restricción CHECK
+            let tipo_uso = null;
+            let id_usuario = null;
+            let id_libro = null;
+            let id_computadora = null;
+            let observacion = null;
+
+            // Determinar acción y tipo_uso
+            if (usuario) {
+                id_usuario = usuario.id_usuario;
+                tipo_uso = 'sala';
+
+                // Buscar última entrada del usuario
+                const ultima = await new Promise((res, rej) => {
+                    this.db.get(
+                        `SELECT accion FROM entrada WHERE id_usuario = ? ORDER BY id_entrada DESC LIMIT 1`,
+                        [id_usuario],
+                        (err, row) => { 
+                            if(err) rej(err); 
+                            else res(row ? row.accion : null); 
+                        }
+                    );
                 });
-    
-            } catch (error) {
-                reject(error);
+
+                accion = (ultima === 'entrada') ? 'salida' : 'entrada';
+                observacion = `Usuario: ${usuario.nombre_completo}`;
+
+            } else if (libro) {
+                id_libro = libro.id_libro;
+                tipo_uso = 'libro';
+                accion = 'entrada'; // Para libros usamos 'entrada' en lugar de 'consulta'
+                observacion = `Consulta libro: ${libro.titulo}`;
+
+            } else if (computadora) {
+                id_computadora = computadora.id_computadora;
+                tipo_uso = 'computadora';
+                
+                // Para computadoras, usar 'entrada' y 'salida' en lugar de 'prestamo' y 'devolucion'
+                const ultima = await new Promise((res, rej) => {
+                    this.db.get(
+                        `SELECT accion FROM entrada WHERE id_computadora = ? ORDER BY id_entrada DESC LIMIT 1`,
+                        [id_computadora],
+                        (err, row) => { 
+                            if(err) rej(err); 
+                            else res(row ? row.accion : null); 
+                        }
+                    );
+                });
+
+                accion = (ultima === 'entrada') ? 'salida' : 'entrada';
+                observacion = `Computadora: ${computadora.marca} ${computadora.modelo}`;
+                
+            } else {
+                // UID no identificado - registrar como 'entrada' pero con observación especial
+                tipo_uso = 'no_identificado';
+                observacion = 'Tarjeta no registrada en el sistema';
             }
-        });
-    }
+
+            // Insertar registro
+            const sql = `
+                INSERT INTO entrada (accion, fecha, hora, tipo_uso, observacion, id_usuario, id_libro, id_computadora, uid_tarjeta)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(sql, [
+                accion, fecha, hora, tipo_uso, observacion, id_usuario, id_libro, id_computadora, uid_tarjeta
+            ], function(err) {
+                if(err) return reject(err);
+
+                resolve({
+                    id_entrada: this.lastID,
+                    accion,
+                    tipo_uso,
+                    id_usuario,
+                    id_libro,
+                    id_computadora,
+                    fecha,
+                    hora,
+                    uid_tarjeta,
+                    observacion
+                });
+            });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
 
     // Obtener el último UID de la tabla 'entrad'
 getUltimoUID = () => {

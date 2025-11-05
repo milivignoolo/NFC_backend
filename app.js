@@ -274,94 +274,217 @@ app.post('/api/usuarios/login', async (req, res) => {
     res.status(500).json({ error: 'Error al intentar iniciar sesión' });
   }
 });
+
 // ==========================
-// ENDPOINTS PARA DASHBOARD (versión con promesas)
+// ENDPOINTS PARA DASHBOARD (usando db.db.all directamente)
 // ==========================
 
-// Helper function para ejecutar queries
-const executeQuery = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-};
-
-// Accesos de hoy
+// Accesos de hoy (NFC + Turnos con estado 'ingreso')
 app.get('/api/dashboard/accesos-hoy', async (req, res) => {
   try {
     const hoy = new Date().toISOString().split('T')[0];
-    const result = await executeQuery(
-      `SELECT COUNT(*) as count FROM entrada WHERE fecha = ? AND accion IN ('entrada')`,
-      [hoy]
-    );
-    res.json({ accesosHoy: result[0]?.count || 0 });
+    
+    // Contar entradas NFC de hoy
+    const resultEntradas = await new Promise((resolve, reject) => {
+      db.db.all(
+        `SELECT COUNT(*) as count FROM entrada WHERE fecha = ? AND accion = 'entrada'`,
+        [hoy],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
+    
+    // Contar turnos con estado 'ingreso' de hoy
+    const resultTurnos = await new Promise((resolve, reject) => {
+      db.db.all(
+        `SELECT COUNT(*) as count FROM turno WHERE fecha = ? AND estado = 'ingreso'`,
+        [hoy],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
+    
+    const accesosNFC = resultEntradas[0]?.count || 0;
+    const accesosTurnos = resultTurnos[0]?.count || 0;
+    const totalAccesos = accesosNFC + accesosTurnos;
+    
+    console.log(`📊 Accesos hoy - NFC: ${accesosNFC}, Turnos: ${accesosTurnos}, Total: ${totalAccesos}`);
+    
+    res.json({ accesosHoy: totalAccesos });
   } catch (error) {
     console.error('Error al obtener accesos de hoy:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Personas actualmente dentro
+// Personas actualmente dentro (NFC + Turnos activos)
 app.get('/api/dashboard/personas-dentro', async (req, res) => {
   try {
-    const result = await executeQuery(`
-      SELECT COUNT(DISTINCT e1.id_usuario) as count
-      FROM entrada e1
-      WHERE e1.accion = 'entrada'
-      AND e1.id_usuario IS NOT NULL
-      AND NOT EXISTS (
-        SELECT 1 
-        FROM entrada e2 
-        WHERE e2.id_usuario = e1.id_usuario 
-        AND e2.accion = 'salida'
-        AND (e2.fecha > e1.fecha OR (e2.fecha = e1.fecha AND e2.hora > e1.hora))
-      )
-    `);
-    res.json({ personasDentro: result[0]?.count || 0 });
+    const hoy = new Date().toISOString().split('T')[0];
+    
+    // Personas dentro por NFC (entrada sin salida hoy)
+    const resultNFC = await new Promise((resolve, reject) => {
+      db.db.all(`
+        SELECT COUNT(DISTINCT e1.id_usuario) as count
+        FROM entrada e1
+        WHERE e1.accion = 'entrada'
+        AND e1.id_usuario IS NOT NULL
+        AND e1.fecha = ?
+        AND NOT EXISTS (
+          SELECT 1 
+          FROM entrada e2 
+          WHERE e2.id_usuario = e1.id_usuario 
+          AND e2.accion = 'salida'
+          AND e2.fecha = ?
+          AND e2.hora > e1.hora
+        )
+      `, [hoy, hoy], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    
+    // Personas dentro por turnos activos hoy
+    const resultTurnos = await new Promise((resolve, reject) => {
+      db.db.all(`
+        SELECT COUNT(DISTINCT id_usuario) as count
+        FROM turno 
+        WHERE estado = 'ingreso'
+        AND fecha = ?
+      `, [hoy], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    
+    const personasNFC = resultNFC[0]?.count || 0;
+    const personasTurnos = resultTurnos[0]?.count || 0;
+    const totalPersonas = personasNFC + personasTurnos;
+    
+    console.log(`👥 Personas dentro - NFC: ${personasNFC}, Turnos: ${personasTurnos}, Total: ${totalPersonas}`);
+    
+    res.json({ personasDentro: totalPersonas });
   } catch (error) {
     console.error('Error al obtener personas dentro:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Última actividad
+// Última actividad (NFC o Turno - la más reciente)
 app.get('/api/dashboard/ultima-actividad', async (req, res) => {
   try {
-    const result = await executeQuery(`
-      SELECT e.*, u.nombre_completo 
-      FROM entrada e 
-      LEFT JOIN usuario u ON e.id_usuario = u.id_usuario 
-      ORDER BY e.fecha DESC, e.hora DESC 
-      LIMIT 1
-    `);
-    res.json(result[0] || null);
+    // Combinar últimas actividades de NFC y Turnos
+    const resultado = await new Promise((resolve, reject) => {
+      db.db.all(`
+        SELECT 
+          tipo,
+          fecha,
+          hora,
+          nombre_completo,
+          movimiento
+        FROM (
+          -- Últimas entradas NFC
+          SELECT 
+            'nfc' as tipo,
+            e.fecha,
+            e.hora,
+            u.nombre_completo,
+            e.accion as movimiento
+          FROM entrada e 
+          LEFT JOIN usuario u ON e.id_usuario = u.id_usuario 
+          WHERE e.accion = 'entrada'
+          
+          UNION ALL
+          
+          -- Últimos turnos habilitados
+          SELECT 
+            'turno' as tipo,
+            t.fecha,
+            t.hora,
+            u.nombre_completo,
+            'ingreso' as movimiento
+          FROM turno t
+          LEFT JOIN usuario u ON t.id_usuario = u.id_usuario
+          WHERE t.estado = 'ingreso'
+        )
+        ORDER BY fecha DESC, hora DESC 
+        LIMIT 1
+      `, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    
+    const ultimaActividad = resultado[0] || null;
+    
+    if (ultimaActividad) {
+      console.log(`⏰ Última actividad: ${ultimaActividad.tipo} - ${ultimaActividad.nombre_completo} - ${ultimaActividad.fecha} ${ultimaActividad.hora}`);
+    } else {
+      console.log('⏰ No hay actividad registrada');
+    }
+    
+    res.json(ultimaActividad);
   } catch (error) {
     console.error('Error al obtener última actividad:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Registro de accesos de hoy
+// Registro de accesos de hoy (TODAS las entradas y salidas)
 app.get('/api/dashboard/accesos-hoy-detalle', async (req, res) => {
   try {
     const hoy = new Date().toISOString().split('T')[0];
-    const result = await executeQuery(`
-      SELECT 
-        e.id_entrada,
-        e.accion as movimiento,
-        e.fecha,
-        e.hora,
-        e.uid_tarjeta,
-        e.id_usuario,
-        u.nombre_completo,
-        e.tipo_uso
-      FROM entrada e
-      LEFT JOIN usuario u ON e.id_usuario = u.id_usuario
-      WHERE e.fecha = ?
-      ORDER BY e.fecha DESC, e.hora DESC
-    `, [hoy]);
+    
+    const result = await new Promise((resolve, reject) => {
+      db.db.all(`
+        -- Todas las entradas y salidas de la tabla entrada
+        SELECT 
+          'nfc' as tipo,
+          e.id_entrada as id,
+          e.accion as movimiento,
+          e.fecha,
+          e.hora,
+          e.uid_tarjeta,
+          e.id_usuario,
+          u.nombre_completo,
+          e.tipo_uso,
+          e.observacion
+        FROM entrada e
+        LEFT JOIN usuario u ON e.id_usuario = u.id_usuario
+        WHERE e.fecha = ?
+        
+        UNION ALL
+        
+        -- Entradas por Turnos (estado 'ingreso')
+        SELECT 
+          'turno' as tipo,
+          t.id_turno as id,
+          'entrada' as movimiento,
+          t.fecha,
+          t.hora,
+          NULL as uid_tarjeta,
+          t.id_usuario,
+          u.nombre_completo,
+          'sala' as tipo_uso,
+          'Ingreso por turno - ' || COALESCE(t.area, 'Sin área') as observacion
+        FROM turno t
+        LEFT JOIN usuario u ON t.id_usuario = u.id_usuario
+        WHERE t.fecha = ?
+        AND t.estado = 'ingreso'
+        
+        ORDER BY fecha DESC, hora DESC
+      `, [hoy, hoy], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    
+    console.log(`📋 Registro accesos: ${result.length} registros (Todas las entradas/salidas)`);
+    
     res.json(result);
   } catch (error) {
     console.error('Error al obtener accesos detalle:', error);
@@ -503,11 +626,18 @@ app.post('/api/nfc', async (req, res) => {
 
     // Llamamos a la función corregida en la DB
     const nuevaEntrada = await db.registrarLecturaNFC(uid_tarjeta);
+    
     // Enviar el nuevo UID a todos los clientes WebSocket
     broadcast({ tipo: 'lectura_nfc', data: nuevaEntrada });
 
+    // Mensaje diferente para UIDs no identificados
+    let mensaje = 'Lectura registrada correctamente';
+    if (nuevaEntrada.accion === '-') {
+      mensaje = 'Tarjeta no identificada - Registrada con movimiento "-"';
+    }
+
     res.status(201).json({
-      message: 'Lectura registrada correctamente',
+      message: mensaje,
       data: nuevaEntrada
     });
   } catch (error) {
